@@ -6,8 +6,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.Bucket;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import uk.ac.ed.inf.acpAssignment.configuration.S3Configuration;
 import uk.ac.ed.inf.acpAssignment.configuration.SystemEnvironment;
@@ -32,8 +35,11 @@ public class S3Service {
     return getS3Client().listObjectsV2(b -> b.bucket(bucket)).contents().stream().map(S3Object::key).toList();
   }
 
-  public List<S3Object> listBucketContent(String bucket) {
-    return getS3Client().listObjectsV2(b -> b.bucket(bucket)).contents();
+  public List<ResponseInputStream<GetObjectResponse>> listObjectContent(String bucket) {
+     var keys = listBucketObjects(bucket);
+     var requests =
+         keys.stream().map(key -> GetObjectRequest.builder().bucket(bucket).key(key).build()).toList();
+      return requests.stream().map(request -> getS3Client().getObject(request)).toList();
   }
 
   public void createBucket(String bucket) {
@@ -49,7 +55,7 @@ public class S3Service {
         .endpointOverride(URI.create(s3Configuration.getS3Endpoint()))
         .credentialsProvider(StaticCredentialsProvider.create(
             AwsBasicCredentials.create(systemEnvironment.getAwsUser(), systemEnvironment.getAwsSecret())))
-        .region(systemEnvironment.getAwsRegion())
+        .region(systemEnvironment.getAwsRegion()).serviceConfiguration(c -> c.pathStyleAccessEnabled(true))
         .build();
   }
 }

@@ -34,7 +34,8 @@ public class S3Controller {
 
     @GetMapping("/buckets")
     public List<String> listBuckets() {
-        return s3Service.listBuckets();
+        var test = s3Service.listBuckets();
+        return test;
     }
 
     @GetMapping("/list-objects/{bucket}")

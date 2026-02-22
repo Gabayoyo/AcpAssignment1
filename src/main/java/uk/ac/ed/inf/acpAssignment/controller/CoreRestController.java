@@ -1,14 +1,13 @@
 package uk.ac.ed.inf.acpAssignment.controller;
 
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import java.util.List;
+import org.json.JSONArray;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.Bucket;
-import software.amazon.awssdk.services.s3.model.S3Object;
 import uk.ac.ed.inf.acpAssignment.configuration.SystemEnvironment;
 import uk.ac.ed.inf.acpAssignment.dto.Restaurant;
 import uk.ac.ed.inf.acpAssignment.dto.Tuple;
@@ -16,6 +15,7 @@ import uk.ac.ed.inf.acpAssignment.dto.Tuple;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.Objects;
+import uk.ac.ed.inf.acpAssignment.service.JsonService;
 import uk.ac.ed.inf.acpAssignment.service.S3Service;
 
 @RestController()
@@ -134,8 +134,13 @@ public class CoreRestController {
     }
 
     @GetMapping("/all/s3/{bucket}")
-    public JsonArray getBucketObjects(@PathVariable String bucket) {
-        List<S3Object> bucketContentList = s3Service.listBucketContent(bucket);
-        return new JsonArray();
+    public ResponseEntity<?> getBucketObjects(@PathVariable String bucket) {
+        var response = s3Service.listObjectContent(bucket);
+        try {
+            ArrayNode arrayNode = JsonService.responsesToJsonArray(response);
+            return new ResponseEntity<>(arrayNode, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
 }

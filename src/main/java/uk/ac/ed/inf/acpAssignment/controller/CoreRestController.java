@@ -14,7 +14,8 @@ import uk.ac.ed.inf.acpAssignment.dto.Tuple;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.Objects;
-import uk.ac.ed.inf.acpAssignment.service.JsonService;
+import uk.ac.ed.inf.acpAssignment.jsonUtils.JsonUtils;
+import uk.ac.ed.inf.acpAssignment.service.DynamoDbService;
 import uk.ac.ed.inf.acpAssignment.service.S3Service;
 
 @RestController()
@@ -31,7 +32,8 @@ public class CoreRestController {
     // @Autowired
     private final SystemEnvironment acpSystemEnvironment;
     private final S3Service s3Service;
-    private final JsonService jsonService;
+    private final JsonUtils jsonUtils;
+    private final DynamoDbService dynamoDbService;
 
     /**
      * Retrieves the ILP service endpoint URL from the system environment.
@@ -59,11 +61,11 @@ public class CoreRestController {
      *
      * @param acpSystemEnvironment the system environment
      */
-    public CoreRestController(SystemEnvironment acpSystemEnvironment, S3Service s3Service,
-        JsonService jsonService) {
+    public CoreRestController(SystemEnvironment acpSystemEnvironment, S3Service s3Service, DynamoDbService dynamoDbService) {
         this.acpSystemEnvironment = acpSystemEnvironment;
         this.s3Service = s3Service;
-        this.jsonService = jsonService;
+        this.jsonUtils = new JsonUtils();
+        this.dynamoDbService = dynamoDbService;
     }
 
     /**
@@ -138,9 +140,9 @@ public class CoreRestController {
     @GetMapping("/all/s3/{bucket}")
     public ResponseEntity<?> getBucketObjects(@PathVariable String bucket) {
         try {
-            var response = s3Service.listBucketContents(bucket);
-            ArrayNode arrayNode = jsonService.responsesToJsonArray(response);
-            return new ResponseEntity<>(arrayNode, HttpStatus.OK);
+            var bucketContents = s3Service.listBucketContents(bucket);
+            ArrayNode ObjectJsonArray = jsonUtils.responsesToJsonArray(bucketContents);
+            return new ResponseEntity<>(ObjectJsonArray, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
@@ -150,9 +152,20 @@ public class CoreRestController {
     public ResponseEntity<?> getBucketObjectWithKey(@PathVariable String bucket,
         @PathVariable String key) {
         try {
-            var response = s3Service.getObjectContent(bucket, key);
-            var jsonNode = jsonService.responseToJsonNode(response);
-            return new ResponseEntity<>(jsonNode, HttpStatus.OK);
+            var objectContent = s3Service.getObjectContent(bucket, key);
+            var objectJson = jsonUtils.responseToJsonNode(objectContent);
+            return new ResponseEntity<>(objectJson, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @GetMapping("all/dynamo/{table}")
+    public ResponseEntity<?> getDynamoTableContents(@PathVariable String table) {
+        try {
+            var tableContents = dynamoDbService.listTableObjects(table);
+            var contentsJsonArray = jsonUtils.stringsToJsonArray(tableContents);
+            return new ResponseEntity<>(contentsJsonArray, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }

@@ -2,7 +2,6 @@ package uk.ac.ed.inf.acpAssignment.controller;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.gson.Gson;
-import org.json.JSONArray;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -32,6 +31,7 @@ public class CoreRestController {
     // @Autowired
     private final SystemEnvironment acpSystemEnvironment;
     private final S3Service s3Service;
+    private final JsonService jsonService;
 
     /**
      * Retrieves the ILP service endpoint URL from the system environment.
@@ -59,9 +59,11 @@ public class CoreRestController {
      *
      * @param acpSystemEnvironment the system environment
      */
-    public CoreRestController(SystemEnvironment acpSystemEnvironment, S3Service s3Service) {
+    public CoreRestController(SystemEnvironment acpSystemEnvironment, S3Service s3Service,
+        JsonService jsonService) {
         this.acpSystemEnvironment = acpSystemEnvironment;
         this.s3Service = s3Service;
+        this.jsonService = jsonService;
     }
 
     /**
@@ -135,10 +137,22 @@ public class CoreRestController {
 
     @GetMapping("/all/s3/{bucket}")
     public ResponseEntity<?> getBucketObjects(@PathVariable String bucket) {
-        var response = s3Service.listObjectContent(bucket);
         try {
-            ArrayNode arrayNode = JsonService.responsesToJsonArray(response);
+            var response = s3Service.listBucketContents(bucket);
+            ArrayNode arrayNode = jsonService.responsesToJsonArray(response);
             return new ResponseEntity<>(arrayNode, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @GetMapping("single/s3/{bucket}/{key}")
+    public ResponseEntity<?> getBucketObjectWithKey(@PathVariable String bucket,
+        @PathVariable String key) {
+        try {
+            var response = s3Service.getObjectContent(bucket, key);
+            var jsonNode = jsonService.responseToJsonNode(response);
+            return new ResponseEntity<>(jsonNode, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }

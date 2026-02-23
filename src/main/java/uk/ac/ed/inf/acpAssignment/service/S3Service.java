@@ -35,11 +35,16 @@ public class S3Service {
     return getS3Client().listObjectsV2(b -> b.bucket(bucket)).contents().stream().map(S3Object::key).toList();
   }
 
-  public List<ResponseInputStream<GetObjectResponse>> listObjectContent(String bucket) {
+  public List<ResponseInputStream<GetObjectResponse>> listBucketContents(String bucket) {
      var keys = listBucketObjects(bucket);
      var requests =
          keys.stream().map(key -> GetObjectRequest.builder().bucket(bucket).key(key).build()).toList();
       return requests.stream().map(request -> getS3Client().getObject(request)).toList();
+  }
+
+  public ResponseInputStream<GetObjectResponse> getObjectContent(String bucket, String key) {
+    var request = GetObjectRequest.builder().bucket(bucket).key(key).build();
+    return getS3Client().getObject(request);
   }
 
   public void createBucket(String bucket) {

@@ -1,8 +1,11 @@
 package uk.ac.ed.inf.acpAssignment.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.gson.Gson;
+import java.net.URL;
+import java.util.Arrays;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -12,14 +15,17 @@ import org.springframework.web.bind.annotation.*;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import uk.ac.ed.inf.acpAssignment.configuration.SystemEnvironment;
+import uk.ac.ed.inf.acpAssignment.dto.Drone;
 import uk.ac.ed.inf.acpAssignment.dto.Restaurant;
 import uk.ac.ed.inf.acpAssignment.dto.Tuple;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.Objects;
+import uk.ac.ed.inf.acpAssignment.dto.UrlPath;
 import uk.ac.ed.inf.acpAssignment.jsonUtils.JsonUtils;
 import uk.ac.ed.inf.acpAssignment.service.DynamoDbService;
+import uk.ac.ed.inf.acpAssignment.service.PostgresService;
 import uk.ac.ed.inf.acpAssignment.service.S3Service;
 
 @RestController()
@@ -38,6 +44,7 @@ public class CoreRestController {
     private final S3Service s3Service;
     private final JsonUtils jsonUtils;
     private final DynamoDbService dynamoDbService;
+    private final PostgresService postgresService;
 
     /**
      * Retrieves the ILP service endpoint URL from the system environment.
@@ -65,11 +72,13 @@ public class CoreRestController {
      *
      * @param acpSystemEnvironment the system environment
      */
-    public CoreRestController(SystemEnvironment acpSystemEnvironment, S3Service s3Service, DynamoDbService dynamoDbService) {
+    public CoreRestController(SystemEnvironment acpSystemEnvironment, S3Service s3Service,
+        DynamoDbService dynamoDbService, PostgresService postgresService) {
         this.acpSystemEnvironment = acpSystemEnvironment;
         this.s3Service = s3Service;
         this.jsonUtils = new JsonUtils();
         this.dynamoDbService = dynamoDbService;
+        this.postgresService = postgresService;
     }
 
     /**
@@ -179,7 +188,41 @@ public class CoreRestController {
     @GetMapping("all/postgres/{table}")
     public ResponseEntity<?> getPostgresTableContents(@PathVariable String table) {
         try {
-            return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+            var rows = postgresService.getRows(table);
+            return new ResponseEntity<>(rows, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @GetMapping("/postgres/current-schema")
+    public ResponseEntity<?> getCurrentSchema() {
+        try {
+            var currentSchema = postgresService.currentSchema();
+            return new ResponseEntity<>(currentSchema, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @GetMapping("/postgres/schemas")
+    public ResponseEntity<?> listSchemas() {
+        try {
+            var schemas = postgresService.listSchemas();
+            return new ResponseEntity<>(schemas, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @PostMapping("/process/dump")
+    public ResponseEntity<?> processDump(@RequestBody UrlPath urlPath) {
+        try {
+            Drone[] drones = jsonUtils.readUrlToDrones(new URL(urlPath.urlPath()));
+            Drone[] computedDrones = Arrays.stream(drones)
+                .map(Drone::withComputedCostPer100Moves)
+                .toArray(Drone[]::new);
+            return new ResponseEntity<>(computedDrones, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }

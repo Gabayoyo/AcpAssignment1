@@ -1,5 +1,7 @@
 package uk.ac.ed.inf.acpAssignment.service;
 
+import java.sql.Connection;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -37,6 +39,24 @@ public class PostgresService {
                 .stream()
                     .map(DroneMapper::entityToDto)
                 .toList();
+    }
+
+    public Map<String, Object> getRows(String table) throws Exception {
+        String sql = "SELECT * FROM " + table;
+        return jdbcTemplate.queryForList(sql).stream().findFirst().orElse(Map.of());
+    }
+
+    public String currentSchema() {
+        return jdbcTemplate.queryForObject("select current_schema()", String.class);
+    }
+
+    public List<String> listSchemas() {
+        String sql = """
+            SELECT schema_name
+            FROM information_schema.schemata
+            ORDER BY schema_name
+            """;
+        return jdbcTemplate.queryForList(sql, String.class);
     }
 
     @Transactional

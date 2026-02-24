@@ -39,6 +39,9 @@ public class DroneEntity {
     @Column(name = "cost_final", precision = 10, scale = 2, nullable = false)
     private BigDecimal costFinal;
 
+    @Column(name = "cost_per_100_moves", precision = 10, scale = 2, nullable = false)
+    private BigDecimal costPer100Moves;
+
     @Column(length = 255)
     private String description;
 
@@ -47,7 +50,7 @@ public class DroneEntity {
     }
 
     public DroneEntity(String id, String name, boolean cooling, boolean heating, BigDecimal capacity, Integer maxMoves,
-                       BigDecimal costPerMove, BigDecimal costInitial, BigDecimal costFinal, String description) {
+                       BigDecimal costPerMove, BigDecimal costInitial, BigDecimal costFinal, BigDecimal costPer100Moves, String description) {
         this.id = id;
         this.name = name;
         this.cooling = cooling;
@@ -57,6 +60,7 @@ public class DroneEntity {
         this.costPerMove = costPerMove;
         this.costInitial = costInitial;
         this.costFinal = costFinal;
+        this.costPer100Moves = costPer100Moves;
         this.description = description;
     }
 
@@ -131,6 +135,14 @@ public class DroneEntity {
 
     public void setCostFinal(BigDecimal costFinal) {
         this.costFinal = costFinal;
+    }
+
+    public BigDecimal getCostPer100Moves() {
+        return costPer100Moves;
+    }
+
+    public void setCostPer100Moves(BigDecimal costPer100Moves) {
+        this.costPer100Moves = costPer100Moves;
     }
 
     public String getDescription() {

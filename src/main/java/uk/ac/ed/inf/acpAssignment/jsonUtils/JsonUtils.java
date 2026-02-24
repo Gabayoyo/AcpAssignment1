@@ -3,9 +3,11 @@ package uk.ac.ed.inf.acpAssignment.jsonUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import java.net.URL;
 import java.util.List;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import uk.ac.ed.inf.acpAssignment.dto.Drone;
 
 public class JsonUtils {
   private final ObjectMapper objectMapper = new ObjectMapper();
@@ -30,6 +32,10 @@ public class JsonUtils {
       arrayNode.add(objectMapper.readTree(string));
     }
     return arrayNode;
+  }
+
+  public Drone[] readUrlToDrones(URL url) throws Exception {
+    return objectMapper.readValue(url, Drone[].class);
   }
 
 }

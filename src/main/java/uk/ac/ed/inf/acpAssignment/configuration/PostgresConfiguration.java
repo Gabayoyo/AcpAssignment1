@@ -12,8 +12,9 @@ import javax.sql.DataSource;
 @Configuration
 public class PostgresConfiguration {
 
-    @Value( "${acp.postgres-endpoint:jdbc:postgresql://localhost:5432/postgres}")
+    @Value( "${ACP_POSTGRES:jdbc:postgresql://localhost:5432/postgres}")
     private String postgresEndpoint;
+
 
     @Bean(name = "postgresEndpoint")
     public String getPostgresEndpoint(){

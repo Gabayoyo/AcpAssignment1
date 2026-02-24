@@ -1,12 +1,16 @@
 package uk.ac.ed.inf.acpAssignment.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.gson.Gson;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import uk.ac.ed.inf.acpAssignment.configuration.SystemEnvironment;
 import uk.ac.ed.inf.acpAssignment.dto.Restaurant;
 import uk.ac.ed.inf.acpAssignment.dto.Tuple;
@@ -140,7 +144,8 @@ public class CoreRestController {
     @GetMapping("/all/s3/{bucket}")
     public ResponseEntity<?> getBucketObjects(@PathVariable String bucket) {
         try {
-            var bucketContents = s3Service.listBucketContents(bucket);
+            List<ResponseInputStream<GetObjectResponse>> bucketContents =
+                s3Service.listBucketContents(bucket);
             ArrayNode ObjectJsonArray = jsonUtils.responsesToJsonArray(bucketContents);
             return new ResponseEntity<>(ObjectJsonArray, HttpStatus.OK);
         } catch (Exception e) {
@@ -152,8 +157,8 @@ public class CoreRestController {
     public ResponseEntity<?> getBucketObjectWithKey(@PathVariable String bucket,
         @PathVariable String key) {
         try {
-            var objectContent = s3Service.getObjectContent(bucket, key);
-            var objectJson = jsonUtils.responseToJsonNode(objectContent);
+            ResponseInputStream<GetObjectResponse> objectContent = s3Service.getObjectContent(bucket, key);
+            JsonNode objectJson = jsonUtils.responseToJsonNode(objectContent);
             return new ResponseEntity<>(objectJson, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
@@ -163,9 +168,18 @@ public class CoreRestController {
     @GetMapping("all/dynamo/{table}")
     public ResponseEntity<?> getDynamoTableContents(@PathVariable String table) {
         try {
-            var tableContents = dynamoDbService.listTableObjects(table);
-            var contentsJsonArray = jsonUtils.stringsToJsonArray(tableContents);
+            var tableContents = dynamoDbService.listTableContents(table);
+            ArrayNode contentsJsonArray = jsonUtils.stringsToJsonArray(tableContents);
             return new ResponseEntity<>(contentsJsonArray, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @GetMapping("all/postgres/{table}")
+    public ResponseEntity<?> getPostgresTableContents(@PathVariable String table) {
+        try {
+            return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }

@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class DynamoDbConfiguration {
 
-    @Value( "${acp.dynamodb-endpoint:http://dynamodb.localhost.localstack.cloud:4566}")
+    @Value( "${ACP_DYNAMODB:http://dynamodb.localhost.localstack.cloud:4566}")
     private String dynamoDbEndpoint;
 
     @Bean(name = "dynamoDbEndpoint")

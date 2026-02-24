@@ -46,6 +46,17 @@ public class DynamoDbService {
                 .toList();
     }
 
+    public List<String> listTableContents(@PathVariable String table) {
+        return getDynamoDbClient()
+                .scanPaginator(ScanRequest.builder()
+                        .tableName(table)
+                        .build())
+                .items()
+                .stream()
+                .map(e -> e.get("content").s())
+                .toList();
+    }
+
     public void createTable(@PathVariable String table) {
         getDynamoDbClient().createTable(b -> b.tableName(table)
                 .attributeDefinitions(AttributeDefinition.builder()

@@ -8,7 +8,7 @@ import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 public class JsonUtils {
-  private ObjectMapper objectMapper = new ObjectMapper();
+  private final ObjectMapper objectMapper = new ObjectMapper();
 
   // singular response to json node
   public JsonNode responseToJsonNode(ResponseInputStream<GetObjectResponse> response) throws Exception {
@@ -24,8 +24,12 @@ public class JsonUtils {
     return arrayNode;
   }
 
-  public ArrayNode stringsToJsonArray(List<String> strings) {
-    return objectMapper.valueToTree(strings);
+  public ArrayNode stringsToJsonArray(List<String> strings) throws Exception {
+    ArrayNode arrayNode = objectMapper.createArrayNode();
+    for (String string : strings) {
+      arrayNode.add(objectMapper.readTree(string));
+    }
+    return arrayNode;
   }
 
 }

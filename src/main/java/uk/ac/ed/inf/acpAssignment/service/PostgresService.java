@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.ColumnMapRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,9 +43,9 @@ public class PostgresService {
                 .toList();
     }
 
-    public Map<String, Object> getRows(String table) throws Exception {
-        String sql = "SELECT * FROM " + table;
-        return jdbcTemplate.queryForList(sql).stream().findFirst().orElse(Map.of());
+    public List<Map<String, Object>> getRows(String table) throws Exception {
+        String sql = "SELECT * FROM s2417814." + table;
+        return jdbcTemplate.queryForList(sql);
     }
 
     public String currentSchema() {
@@ -69,9 +70,10 @@ public class PostgresService {
     @Transactional
     public String createDroneUsingJdbc(Drone drone) {
         var createDrone = DroneMapper.dtoToEntity(drone);
-        createDrone.setId(UUID.randomUUID().toString());
+        // createDrone.setId(UUID.randomUUID().toString());
 
-        String sql = "INSERT INTO ilp.drones (id, name, cooling, heating, capacity, max_moves, cost_per_move, cost_initial, cost_final) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO s2417814.drones (id, name, cooling, heating, capacity, "
+            + "max_moves, cost_per_move, cost_initial, cost_final) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         jdbcTemplate.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(sql);

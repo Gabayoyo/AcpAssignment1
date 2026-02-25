@@ -1,5 +1,6 @@
 package uk.ac.ed.inf.acpAssignment.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -7,10 +8,12 @@ import org.springframework.stereotype.Service;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.Bucket;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import uk.ac.ed.inf.acpAssignment.configuration.S3Configuration;
 import uk.ac.ed.inf.acpAssignment.configuration.SystemEnvironment;
@@ -43,8 +46,18 @@ public class S3Service {
       return requests.stream().map(request -> getS3Client().getObject(request)).toList();
   }
 
-  public void addDronesToBucket(Drone[] drone) {
+  public void addDronesToBucket(Drone[] drones) throws Exception {
+    ObjectMapper objectMapper = new ObjectMapper();
+    for (Drone drone : drones) {
+      String json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(drone);
 
+      PutObjectRequest req = PutObjectRequest.builder()
+          .bucket("s2417814")
+          .key(drone.name())
+          .build();
+
+      getS3Client().putObject(req, RequestBody.fromString(json));
+    }
   }
 
   public ResponseInputStream<GetObjectResponse> getObjectContent(String bucket, String key) {

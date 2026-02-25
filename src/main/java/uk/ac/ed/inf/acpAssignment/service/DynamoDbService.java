@@ -67,6 +67,17 @@ public class DynamoDbService {
                 .toList();
     }
 
+    public String getObjectContent(@PathVariable String table, @PathVariable String key) {
+        GetItemRequest request = GetItemRequest.builder()
+                .tableName(table)
+                .key(java.util.Map.of(KEY_COLUMN_NAME, AttributeValue.builder().s(key).build()))
+                .build();
+
+        GetItemResponse response = getDynamoDbClient().getItem(request);
+
+        return response.item().get("content").s();
+    }
+
     public void createTable(@PathVariable String table) {
         getDynamoDbClient().createTable(b -> b.tableName(table)
                 .attributeDefinitions(AttributeDefinition.builder()

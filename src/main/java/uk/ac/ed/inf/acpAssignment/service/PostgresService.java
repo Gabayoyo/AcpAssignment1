@@ -7,6 +7,7 @@ import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.PathVariable;
 import uk.ac.ed.inf.acpAssignment.dto.Drone;
 import uk.ac.ed.inf.acpAssignment.entity.DroneEntity;
 import uk.ac.ed.inf.acpAssignment.mapper.DroneMapper;
@@ -59,12 +60,18 @@ public class PostgresService {
         return jdbcTemplate.queryForList(sql, String.class);
     }
 
+    public void addDronesToTable(Drone[] drones, @PathVariable String table) {
+        for (Drone drone : drones) {
+            createDroneUsingJdbc(drone);
+        }
+    }
+
     @Transactional
     public String createDroneUsingJdbc(Drone drone) {
         var createDrone = DroneMapper.dtoToEntity(drone);
         createDrone.setId(UUID.randomUUID().toString());
 
-        String sql = "INSERT INTO ilp.drones (id, name, cooling, heating, capacity, max_moves, cost_per_move, cost_initial, cost_final, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO ilp.drones (id, name, cooling, heating, capacity, max_moves, cost_per_move, cost_initial, cost_final) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         jdbcTemplate.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(sql);
@@ -77,7 +84,6 @@ public class PostgresService {
             ps.setBigDecimal(7, createDrone.getCostPerMove());
             ps.setBigDecimal(8, createDrone.getCostInitial());
             ps.setBigDecimal(9, createDrone.getCostFinal());
-            ps.setString(10, createDrone.getDescription());
             return ps;
         });
 

@@ -34,6 +34,10 @@ public class JsonUtils {
     return arrayNode;
   }
 
+  public JsonNode stringToJsonNode(String string) throws Exception {
+    return objectMapper.readTree(string);
+  }
+
   public Drone[] readUrlToDrones(URL url) throws Exception {
     return objectMapper.readValue(url, Drone[].class);
   }

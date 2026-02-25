@@ -184,6 +184,18 @@ public class CoreRestController {
         }
     }
 
+    @GetMapping("single/dynamo/{table}/{key}")
+    public ResponseEntity<?> getDynamoObjectWithKey(@PathVariable String table,
+        @PathVariable String key) {
+        try {
+            String objectContent = dynamoDbService.getObjectContent(table, key);
+            JsonNode objectJson = jsonUtils.stringToJsonNode(objectContent);
+            return new ResponseEntity<>(objectJson, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
     @GetMapping("all/postgres/{table}")
     public ResponseEntity<?> getPostgresTableContents(@PathVariable String table) {
         try {
@@ -242,6 +254,21 @@ public class CoreRestController {
         try {
             Drone[] drones = jsonUtils.readUrlToDrones(new URL(urlPath.urlPath()));
             Drone[] computedDrones = DroneUtils.computeDronesCostPer100Moves(drones);
+            s3Service.addDronesToBucket(computedDrones);
+            return new ResponseEntity<>(HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @PostMapping("/process/postgres/{table}")
+    public ResponseEntity<?> processPostgres(@PathVariable String table,
+        @RequestBody UrlPath urlPath) {
+        try {
+            Drone[] drones = jsonUtils.readUrlToDrones(new URL(urlPath.urlPath()));
+            Drone[] computedDrones = DroneUtils.computeDronesCostPer100Moves(drones);
+            postgresService.addDronesToTable(computedDrones, table);
+            return new ResponseEntity<>(HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }

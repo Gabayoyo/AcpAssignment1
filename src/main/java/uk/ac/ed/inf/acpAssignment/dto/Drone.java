@@ -2,7 +2,7 @@ package uk.ac.ed.inf.acpAssignment.dto;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.math.BigDecimal;
-import uk.ac.ed.inf.acpAssignment.jsonUtils.DroneDeserializer;
+import uk.ac.ed.inf.acpAssignment.utils.DroneDeserializer;
 
 public record Drone(
     String id,

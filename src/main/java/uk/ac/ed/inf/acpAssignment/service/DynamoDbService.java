@@ -1,5 +1,7 @@
 package uk.ac.ed.inf.acpAssignment.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,8 @@ import uk.ac.ed.inf.acpAssignment.configuration.SystemEnvironment;
 
 import java.net.URI;
 import java.util.List;
+import uk.ac.ed.inf.acpAssignment.dto.Drone;
+import uk.ac.ed.inf.acpAssignment.dto.DynamoObject;
 
 @Slf4j
 @Service
@@ -33,17 +37,23 @@ public class DynamoDbService {
     }
 
 
-    public List<String> listTableObjects(@PathVariable String table) {
+    public List<DynamoObject> listTableObjects(@PathVariable String table) {
+        ObjectMapper objectMapper = new ObjectMapper();
         return getDynamoDbClient()
-                .scanPaginator(ScanRequest.builder()
-                        .tableName(table)
-                        .build())
-                .items()
-                .stream()
-                .map(e ->
-                    "{ \"key\": \"" + e.get("key").s() + " \", \"content\": \"" + e.get("content").s() + "\" } "
-                )
-                .toList();
+            .scanPaginator(ScanRequest.builder().tableName(table).build())
+            .items()
+            .stream()
+            .map(e -> {
+                String key = e.get("key").s();
+                String content = e.get("content").s();
+                try {
+                    JsonNode node = objectMapper.readTree(content);
+                    return new DynamoObject(key, node);
+                } catch (Exception ex) {
+                    return new DynamoObject(key, objectMapper.createObjectNode().put("content", content));
+                }
+            })
+            .toList();
     }
 
     public List<String> listTableContents(@PathVariable String table) {
@@ -81,6 +91,14 @@ public class DynamoDbService {
         ));
     }
 
+    public void addDronesToTable(Drone[] drones) throws Exception {
+        ObjectMapper objectMapper = new ObjectMapper();
+        for (Drone drone : drones) {
+            createObject("s2417814", drone.name(),
+                objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(drone));
+        }
+    }
+
     public String getTablePrimaryKey(
             @Parameter(name = "table", description = "The name of the DynamoDB table")
             @PathVariable(required = true)
@@ -114,5 +132,15 @@ public class DynamoDbService {
             createTable(sqsTableInDynamoDb);
         }
         createObject(sqsTableInDynamoDb, key, message);
+    }
+
+    public void clearTable(@PathVariable String table) {
+        getDynamoDbClient().scanPaginator(ScanRequest.builder()
+                .tableName(table)
+                .build())
+                .items()
+                .forEach(e -> getDynamoDbClient().deleteItem(b -> b.tableName(table).key(
+                        java.util.Map.of("key", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().s(e.get("key").s()).build())
+                )));
     }
 }

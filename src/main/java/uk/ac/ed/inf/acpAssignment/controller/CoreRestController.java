@@ -1,11 +1,9 @@
 package uk.ac.ed.inf.acpAssignment.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.gson.Gson;
 import java.net.URL;
-import java.util.Arrays;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -23,7 +21,8 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.Objects;
 import uk.ac.ed.inf.acpAssignment.dto.UrlPath;
-import uk.ac.ed.inf.acpAssignment.jsonUtils.JsonUtils;
+import uk.ac.ed.inf.acpAssignment.utils.DroneUtils;
+import uk.ac.ed.inf.acpAssignment.utils.JsonUtils;
 import uk.ac.ed.inf.acpAssignment.service.DynamoDbService;
 import uk.ac.ed.inf.acpAssignment.service.PostgresService;
 import uk.ac.ed.inf.acpAssignment.service.S3Service;
@@ -219,10 +218,30 @@ public class CoreRestController {
     public ResponseEntity<?> processDump(@RequestBody UrlPath urlPath) {
         try {
             Drone[] drones = jsonUtils.readUrlToDrones(new URL(urlPath.urlPath()));
-            Drone[] computedDrones = Arrays.stream(drones)
-                .map(Drone::withComputedCostPer100Moves)
-                .toArray(Drone[]::new);
+            Drone[] computedDrones = DroneUtils.computeDronesCostPer100Moves(drones);
             return new ResponseEntity<>(computedDrones, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @PostMapping("/process/dynamo")
+    public ResponseEntity<?> processDynamo(@RequestBody UrlPath urlPath) {
+        try {
+              Drone[] drones = jsonUtils.readUrlToDrones(new URL(urlPath.urlPath()));
+                Drone[] computedDrones = DroneUtils.computeDronesCostPer100Moves(drones);
+                dynamoDbService.addDronesToTable(computedDrones);
+            return new ResponseEntity<>(HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @PostMapping("/process/s3")
+    public ResponseEntity<?> processS3(@RequestBody UrlPath urlPath) {
+        try {
+            Drone[] drones = jsonUtils.readUrlToDrones(new URL(urlPath.urlPath()));
+            Drone[] computedDrones = DroneUtils.computeDronesCostPer100Moves(drones);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }

@@ -14,6 +14,7 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import uk.ac.ed.inf.acpAssignment.configuration.S3Configuration;
 import uk.ac.ed.inf.acpAssignment.configuration.SystemEnvironment;
+import uk.ac.ed.inf.acpAssignment.dto.Drone;
 
 @Slf4j
 @Service
@@ -40,6 +41,10 @@ public class S3Service {
      var requests =
          keys.stream().map(key -> GetObjectRequest.builder().bucket(bucket).key(key).build()).toList();
       return requests.stream().map(request -> getS3Client().getObject(request)).toList();
+  }
+
+  public void addDronesToBucket(Drone[] drone) {
+
   }
 
   public ResponseInputStream<GetObjectResponse> getObjectContent(String bucket, String key) {

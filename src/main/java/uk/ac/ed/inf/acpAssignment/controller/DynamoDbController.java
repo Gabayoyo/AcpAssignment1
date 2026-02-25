@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import uk.ac.ed.inf.acpAssignment.configuration.DynamoDbConfiguration;
+import uk.ac.ed.inf.acpAssignment.dto.DynamoObject;
 import uk.ac.ed.inf.acpAssignment.service.DynamoDbService;
 import java.util.List;
 
@@ -30,8 +31,8 @@ public class DynamoDbController {
     }
 
     @GetMapping(path = "/list-objects/{table}", produces = "application/json")
-    public ResponseEntity<String> listTableObjects(@PathVariable String table) {
-        return ResponseEntity.ok("[" + String.join(", " , dynamoDbService.listTableObjects(table)) + "]");
+    public ResponseEntity<List<DynamoObject>> listTableObjects(@PathVariable String table) {
+        return ResponseEntity.ok(dynamoDbService.listTableObjects(table));
     }
 
     @PutMapping("/create-table/{table}")
@@ -51,5 +52,10 @@ public class DynamoDbController {
             String table) {
 
         return dynamoDbService.getTablePrimaryKey(table);
+    }
+
+    @GetMapping ("/clear-table/{table}")
+    public void clearTable(@PathVariable String table) {
+        dynamoDbService.clearTable(table);
     }
 }

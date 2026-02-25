@@ -1,4 +1,4 @@
-package uk.ac.ed.inf.acpAssignment.jsonUtils;
+package uk.ac.ed.inf.acpAssignment.utils;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

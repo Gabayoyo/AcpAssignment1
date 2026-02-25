@@ -1,4 +1,4 @@
-package uk.ac.ed.inf.acpAssignment.jsonUtils;
+package uk.ac.ed.inf.acpAssignment.utils;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;

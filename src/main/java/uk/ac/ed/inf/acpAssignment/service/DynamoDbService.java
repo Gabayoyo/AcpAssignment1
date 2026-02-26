@@ -3,6 +3,7 @@ package uk.ac.ed.inf.acpAssignment.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Parameter;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -100,6 +101,15 @@ public class DynamoDbService {
                 java.util.Map.of("key", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().s(key).build(),
                         "content", software.amazon.awssdk.services.dynamodb.model.AttributeValue.builder().s(objectContent).build())
         ));
+    }
+
+    public void createObjects(List<Map<String, Object>> objects) throws Exception {
+        ObjectMapper objectMapper = new ObjectMapper();
+        for (Map<String, Object> object : objects) {
+            String key = java.util.UUID.randomUUID().toString();
+            String content = objectMapper.writeValueAsString(object);
+            createObject("s2417814", key, content);
+        }
     }
 
     public void addDronesToTable(Drone[] drones) throws Exception {

@@ -44,8 +44,18 @@ public class PostgresService {
     }
 
     public List<Map<String, Object>> getRows(String table) throws Exception {
-        String sql = "SELECT * FROM s2417814." + table;
+        String sql = "SELECT * FROM " + table;
         return jdbcTemplate.queryForList(sql);
+    }
+
+    public List<String> listTables() {
+        String sql = """
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = 's2417814'
+            ORDER BY table_name
+            """;
+        return jdbcTemplate.queryForList(sql, String.class);
     }
 
     public String currentSchema() {
@@ -63,8 +73,38 @@ public class PostgresService {
 
     public void addDronesToTable(Drone[] drones, @PathVariable String table) {
         for (Drone drone : drones) {
-            createDroneUsingJdbc(drone);
+            createDroneInTableUsingJdbc(drone, table);
         }
+    }
+
+    @Transactional
+    public String createDroneInTableUsingJdbc(Drone drone, @PathVariable String table) {
+        var createDrone = DroneMapper.dtoToEntity(drone);
+        // createDrone.setId(UUID.randomUUID().toString());
+
+        String sql = "INSERT INTO " + table + " (id, name, cooling, heating, capacity, "
+            + "maxMoves, costPerMove, costInitial, costFinal, costper100moves) VALUES (?, ?, ?, "
+            + "?, ?, "
+            + "?, "
+            + "?, ?, "
+            + "?, ?)";
+
+        jdbcTemplate.update(connection -> {
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ps.setString(1, createDrone.getId());
+            ps.setString(2, createDrone.getName());
+            ps.setBoolean(3, createDrone.isCooling());
+            ps.setBoolean(4, createDrone.isHeating());
+            ps.setBigDecimal(5, createDrone.getCapacity());
+            ps.setInt(6, createDrone.getMaxMoves());
+            ps.setBigDecimal(7, createDrone.getCostPerMove());
+            ps.setBigDecimal(8, createDrone.getCostInitial());
+            ps.setBigDecimal(9, createDrone.getCostFinal());
+            ps.setBigDecimal(10, createDrone.getCostPer100Moves());
+            return ps;
+        });
+
+        return createDrone.getId();
     }
 
     @Transactional
@@ -73,7 +113,8 @@ public class PostgresService {
         // createDrone.setId(UUID.randomUUID().toString());
 
         String sql = "INSERT INTO s2417814.drones (id, name, cooling, heating, capacity, "
-            + "max_moves, cost_per_move, cost_initial, cost_final) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            + "maxMoves, costPerMove, costInitial, costFinal) VALUES (?, ?, ?, ?, ?, ?, ?, ?, "
+            + "?)";
 
         jdbcTemplate.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(sql);

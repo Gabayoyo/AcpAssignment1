@@ -3,6 +3,7 @@ package uk.ac.ed.inf.acpAssignment.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -57,6 +58,20 @@ public class S3Service {
           .build();
 
       getS3Client().putObject(req, RequestBody.fromString(json));
+    }
+  }
+
+  public void addDroneObjectsToBucket(List<Map<String, Object>> objects) throws Exception {
+    ObjectMapper objectMapper = new ObjectMapper();
+    Drone[] drones = new Drone[objects.size()];
+    for (Map<String, Object> object : objects) {
+      String droneJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(object);
+      PutObjectRequest req = PutObjectRequest.builder()
+          .bucket("s2417814")
+          .key(java.util.UUID.randomUUID().toString())
+          .build();
+
+      getS3Client().putObject(req, RequestBody.fromString(droneJson));
     }
   }
 

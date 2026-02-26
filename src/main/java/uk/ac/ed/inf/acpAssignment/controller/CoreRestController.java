@@ -273,4 +273,26 @@ public class CoreRestController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
+
+    @PostMapping("/copy-content/dynamo/{table}")
+    public ResponseEntity<?> copyContentToDynamo(@PathVariable String table) {
+        try {
+            var rows = postgresService.getRows(table);
+            dynamoDbService.createObjects(rows);
+            return new ResponseEntity<>(HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+     @PostMapping("/copy-content/s3/{table}")
+    public ResponseEntity<?> copyContentToS3(@PathVariable String table) {
+        try {
+            var rows = postgresService.getRows(table);
+            s3Service.addDroneObjectsToBucket(rows);
+            return new ResponseEntity<>(HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+     }
 }

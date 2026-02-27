@@ -52,12 +52,7 @@ public class S3Service {
     for (Drone drone : drones) {
       String json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(drone);
 
-      PutObjectRequest req = PutObjectRequest.builder()
-          .bucket("s2417814")
-          .key(drone.name())
-          .build();
-
-      getS3Client().putObject(req, RequestBody.fromString(json));
+      addObjectToBucket("s2417814", drone.name(), json);
     }
   }
 
@@ -65,13 +60,17 @@ public class S3Service {
     ObjectMapper objectMapper = new ObjectMapper();
     for (Map<String, Object> object : objects) {
       String droneJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(object);
-      PutObjectRequest req = PutObjectRequest.builder()
-          .bucket("s2417814")
-          .key(java.util.UUID.randomUUID().toString())
-          .build();
-
-      getS3Client().putObject(req, RequestBody.fromString(droneJson));
+      addObjectToBucket("s2417814", java.util.UUID.randomUUID().toString(), droneJson);
     }
+  }
+
+  public void addObjectToBucket(String bucket, String key, String content) {
+    PutObjectRequest req = PutObjectRequest.builder()
+        .bucket(bucket)
+        .key(key)
+        .build();
+
+    getS3Client().putObject(req, RequestBody.fromString(content));
   }
 
   public ResponseInputStream<GetObjectResponse> getObjectContent(String bucket, String key) {

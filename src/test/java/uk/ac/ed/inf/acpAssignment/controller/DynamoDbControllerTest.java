@@ -6,6 +6,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.Objects;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -35,7 +36,10 @@ public class DynamoDbControllerTest {
         dynamoDbController.createObject(tableName, key, content);
         
         // Verify object (key) exists in list
-        String responseBody = Objects.requireNonNull(dynamoDbController.listTableObjects(tableName).getBody());
-        assertTrue(responseBody.contains("\"key\": \"" + key + "\""));
+        String responseBody =
+            Objects.requireNonNull(dynamoDbController.listTableObjects(tableName).getBody().getFirst().key())
+            .toString();
+        assertTrue(responseBody.contains("key-1"));
     }
+
 }

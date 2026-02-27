@@ -63,7 +63,6 @@ public class S3Service {
 
   public void addDroneObjectsToBucket(List<Map<String, Object>> objects) throws Exception {
     ObjectMapper objectMapper = new ObjectMapper();
-    Drone[] drones = new Drone[objects.size()];
     for (Map<String, Object> object : objects) {
       String droneJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(object);
       PutObjectRequest req = PutObjectRequest.builder()

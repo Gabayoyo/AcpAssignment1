@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.gson.Gson;
 import java.net.URL;
 import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -161,7 +162,7 @@ public class CoreRestController {
         }
     }
 
-    @GetMapping("single/s3/{bucket}/{key}")
+    @GetMapping("/single/s3/{bucket}/{key}")
     public ResponseEntity<?> getBucketObjectWithKey(@PathVariable String bucket,
         @PathVariable String key) {
         try {
@@ -173,7 +174,7 @@ public class CoreRestController {
         }
     }
 
-    @GetMapping("all/dynamo/{table}")
+    @GetMapping("/all/dynamo/{table}")
     public ResponseEntity<?> getDynamoTableContents(@PathVariable String table) {
         try {
             var tableContents = dynamoDbService.listTableContents(table);
@@ -184,7 +185,7 @@ public class CoreRestController {
         }
     }
 
-    @GetMapping("single/dynamo/{table}/{key}")
+    @GetMapping("/single/dynamo/{table}/{key}")
     public ResponseEntity<?> getDynamoObjectWithKey(@PathVariable String table,
         @PathVariable String key) {
         try {
@@ -196,8 +197,8 @@ public class CoreRestController {
         }
     }
 
-    @GetMapping("all/postgres/{table}")
-    public ResponseEntity<?> getPostgresTableContents(@PathVariable String table) {
+    @GetMapping("/all/postgres/{table}")
+    public ResponseEntity<List<Map<String, Object>>> getPostgresTableContents(@PathVariable String table) {
         try {
             var rows = postgresService.getRows(table);
             return new ResponseEntity<>(rows, HttpStatus.OK);

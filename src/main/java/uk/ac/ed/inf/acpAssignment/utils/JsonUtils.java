@@ -57,5 +57,14 @@ public class JsonUtils {
     return objectMapper.readValue(url, Drone[].class);
   }
 
+  public boolean isValidJson(String string) {
+    try {
+      objectMapper.readTree(string);
+      return true;
+    } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+      return false;
+    }
+  }
+
 }
 

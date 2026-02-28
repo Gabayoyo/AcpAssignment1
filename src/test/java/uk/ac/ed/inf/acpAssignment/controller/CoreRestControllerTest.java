@@ -3,16 +3,24 @@ package uk.ac.ed.inf.acpAssignment.controller;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import uk.ac.ed.inf.acpAssignment.service.DynamoDbService;
+import uk.ac.ed.inf.acpAssignment.service.PostgresService;
 import uk.ac.ed.inf.acpAssignment.service.S3Service;
 
 @SpringBootTest(properties = {
     "ACP_S3=http://localhost:4566",
-    "ACP_DYNAMODB=http://localhost:4566"
+    "ACP_DYNAMODB=http://localhost:4566",
+    "ACP_POSTGRES=jdbc:postgresql://localhost:5433/postgres?currentSchema=s2417814"
 })
 public class CoreRestControllerTest {
 
@@ -24,6 +32,12 @@ public class CoreRestControllerTest {
 
   @Autowired
   private DynamoDbService dynamoDbService;
+
+  @Autowired
+  private PostgresService postgresService;
+
+  @Autowired
+  JdbcTemplate jdbcTemplate;
 
   @Test
   public void testGetNonJsonBucketObject() {
@@ -204,6 +218,26 @@ public class CoreRestControllerTest {
     dynamoDbService.createObject(tableName, "test-key", jsonContent);
     var response = coreRestController.getDynamoObjectWithKey(tableName, "test-key");
     assertEquals(response.getBody().toString(), "\"" + jsonContent + "\"");
+  }
+
+  @Test
+  public void testReadEmptyPostgresTable() {
+    var tableName = "test_table_" + System.currentTimeMillis();
+    var content = "test-content";
+    jdbcTemplate.execute("CREATE TABLE \"" + tableName + "\" (id INTEGER, name VARCHAR(255), age INTEGER)");
+    var tables = postgresService.listTables();
+    var response = coreRestController.getPostgresTableContents(tableName);
+    assertEquals(response.getBody().toString(), "[]");
+  }
+
+  @Test
+  public void testReadPostgresTable() {
+    var tableName = "test_table_" + System.currentTimeMillis();
+    jdbcTemplate.execute("CREATE TABLE \"" + tableName + "\" (id INTEGER, name VARCHAR(255), age INTEGER)");
+    jdbcTemplate.execute("INSERT INTO \"" + tableName + "\" (id, name, age) VALUES (1, 'Alice', 30)");
+    var tables = postgresService.listTables();
+    var response = coreRestController.getPostgresTableContents(tableName);
+    assertEquals(response.getBody().toString(), "[]");
   }
 
 }

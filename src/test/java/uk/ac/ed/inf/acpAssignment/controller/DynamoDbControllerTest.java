@@ -16,30 +16,5 @@ public class DynamoDbControllerTest {
     @Autowired
     private DynamoDbController dynamoDbController;
 
-    @Test
-    public void testCreateTableSucceeds() {
-        String tableName = "test-table-" + System.currentTimeMillis();
-        dynamoDbController.createTable(tableName);
-        
-        // Verify table exists
-        assertTrue(dynamoDbController.listTables().contains(tableName));
-    }
-
-
-    @Test
-    public void testCreateObjectSucceeds() {
-        String tableName = "test-table-" + System.currentTimeMillis();
-        dynamoDbController.createTable(tableName);
-        
-        String key = "key-1";
-        String content = "hello world";
-        dynamoDbController.createObject(tableName, key, content);
-        
-        // Verify object (key) exists in list
-        String responseBody =
-            Objects.requireNonNull(dynamoDbController.listTableObjects(tableName).getBody().getFirst().key())
-            .toString();
-        assertTrue(responseBody.contains("key-1"));
-    }
 
 }

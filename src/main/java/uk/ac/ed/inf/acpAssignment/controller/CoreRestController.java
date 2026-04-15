@@ -22,6 +22,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.Objects;
 import uk.ac.ed.inf.acpAssignment.dto.UrlPath;
+import uk.ac.ed.inf.acpAssignment.service.RabbitMqService;
 import uk.ac.ed.inf.acpAssignment.utils.DroneUtils;
 import uk.ac.ed.inf.acpAssignment.utils.JsonUtils;
 import uk.ac.ed.inf.acpAssignment.service.DynamoDbService;
@@ -45,6 +46,7 @@ public class CoreRestController {
     private final JsonUtils jsonUtils;
     private final DynamoDbService dynamoDbService;
     private final PostgresService postgresService;
+    private final RabbitMqService rabbitMqService;
 
     /**
      * Retrieves the ILP service endpoint URL from the system environment.
@@ -73,12 +75,14 @@ public class CoreRestController {
      * @param acpSystemEnvironment the system environment
      */
     public CoreRestController(SystemEnvironment acpSystemEnvironment, S3Service s3Service,
-        DynamoDbService dynamoDbService, PostgresService postgresService) {
+        DynamoDbService dynamoDbService, PostgresService postgresService,
+        RabbitMqService rabbitMqService) {
         this.acpSystemEnvironment = acpSystemEnvironment;
         this.s3Service = s3Service;
         this.jsonUtils = new JsonUtils();
         this.dynamoDbService = dynamoDbService;
         this.postgresService = postgresService;
+        this.rabbitMqService = rabbitMqService;
     }
 
     /**
@@ -286,11 +290,22 @@ public class CoreRestController {
         }
     }
 
-     @PostMapping("/copy-content/s3/{table}")
+    @PostMapping("/copy-content/s3/{table}")
     public ResponseEntity<?> copyContentToS3(@PathVariable String table) {
         try {
             var rows = postgresService.getRows(table);
             s3Service.addDroneObjectsToBucket(rows);
+            return new ResponseEntity<>(HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+     }
+
+     @PutMapping("messages/rabbitmq/{queueName}/{messageCount}")
+    public ResponseEntity<?> sendMessagesRabbit(@PathVariable String queueName,
+         @PathVariable int messageCount) {
+        try {
+            rabbitMqService.sendMessages(queueName, messageCount);
             return new ResponseEntity<>(HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);

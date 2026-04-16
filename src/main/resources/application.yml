@@ -68,3 +68,13 @@ acp:
 
   sqs-queue-name: acp-tutorial-queue
   sqs-table-in-dynamodb: acp-sqs-table
+
+kafka:
+  bootstrap-servers: localhost:9092
+  acks: all
+  key-serializer: org.apache.kafka.common.serialization.StringSerializer
+  value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+rabbitmq:
+  host: ${RABBITMQ_HOST:localhost}
+  port: ${RABBITMQ_PORT:5672}

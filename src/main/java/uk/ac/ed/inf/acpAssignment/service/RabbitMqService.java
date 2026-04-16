@@ -1,63 +1,143 @@
 package uk.ac.ed.inf.acpAssignment.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.GetResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.Channel;
+import uk.ac.ed.inf.acpAssignment.configuration.RabbitMqConfiguration;
+import uk.ac.ed.inf.acpAssignment.configuration.SystemEnvironment;
+import uk.ac.ed.inf.acpAssignment.dto.MessageWrapper;
 
 @Slf4j
 @Service
 public class RabbitMqService {
-  private static final String HOST = "localhost"; // change later to env var
-  private static final String STUDENT_ID = "your-student-id";
 
-  public void sendMessages(String queueName, int messageCount) {
+  private final RabbitMqConfiguration rabbitMqConfiguration;
+  private final SystemEnvironment systemEnvironment;
+
+  public RabbitMqService(RabbitMqConfiguration rabbitMqConfiguration, SystemEnvironment systemEnvironment) {
+    this.rabbitMqConfiguration = rabbitMqConfiguration;
+    this.systemEnvironment = systemEnvironment;
+  }
+
+  public void sendMessages(String queueName, int messageCount) throws Exception {
     ConnectionFactory factory = new ConnectionFactory();
-    factory.setHost(HOST);
+    factory.setHost(rabbitMqConfiguration.getRabbitMqHost());
 
     try (Connection connection = factory.newConnection();
         Channel channel = connection.createChannel()) {
       channel.queueDeclare(queueName, true, false, false, null);
 
       for (int i = 0; i < messageCount; i++) {
-        String message = String.format("{\"uid\":\"%s\",\"counter\":%d}", STUDENT_ID, i);
+        String message = String.format("{\"uid\":\"%s\",\"counter\":%d}", queueName, i);
         channel.basicPublish("", queueName, null, message.getBytes());
         log.info("Sent message: {}", message);
       }
 
-    } catch (Exception e) {
-      log.error("Error sending messages to RabbitMQ", e);
     }
   }
 
-  public List<String> getMessages(String queueName, int timeoutInMsec) {
+  public List<String> getMessages(String queueName, int timeoutInMsec) throws Exception {
     List<String> messages = new ArrayList<>();
 
     ConnectionFactory factory = new ConnectionFactory();
-    factory.setHost(HOST);
+    factory.setHost(rabbitMqConfiguration.getRabbitMqHost());
 
-    long startTime = System.currentTimeMillis();
+    long deadline = System.currentTimeMillis() + timeoutInMsec - 50;
 
     try (Connection connection = factory.newConnection();
         Channel channel = connection.createChannel()) {
       channel.queueDeclare(queueName, true, false, false, null);
 
-      while (System.currentTimeMillis() < timeoutInMsec) {
+      while (System.currentTimeMillis() < deadline) {
         GetResponse response = channel.basicGet(queueName, true);
 
-        if (response == null) { break; }
+        if (response == null) break;
 
         String message = new String(response.getBody(), StandardCharsets.UTF_8);
         messages.add(message);
       }
-    } catch (Exception e) {
-      log.error("Error reading messages from RabbitMQ", e);
     }
     return messages;
+  }
+
+  public List<String> readSortedMessages(String queueName, int messagesToConsider) throws Exception {
+
+    List<String> messages = new ArrayList<>();
+    List<MessageWrapper> parsedMessages = new ArrayList<>();
+
+    ConnectionFactory factory = new ConnectionFactory();
+    factory.setHost(rabbitMqConfiguration.getRabbitMqHost());
+    factory.setPort(rabbitMqConfiguration.getRabbitMqPort());
+
+    try (Connection connection = factory.newConnection();
+        Channel channel = connection.createChannel()) {
+      channel.queueDeclare(queueName, true, false, false, null);
+
+      ObjectMapper mapper = new ObjectMapper();
+      long start = System.currentTimeMillis();
+
+      while (parsedMessages.size() < messagesToConsider) {
+        if (System.currentTimeMillis() - start > 1000) break;
+        GetResponse response = channel.basicGet(queueName, true);
+
+        // read
+        String json = new String(response.getBody(), StandardCharsets.UTF_8);
+        JsonNode node = mapper.readTree(json);
+        int id = node.get("Id").asInt();
+
+        // store
+        parsedMessages.add(new MessageWrapper(id, json));
+      }
+      // sort
+      parsedMessages.sort(Comparator.comparingInt(MessageWrapper::id));
+
+      for (MessageWrapper entry : parsedMessages) {
+        messages.add(entry.json());
+      }
+
+    }
+    // deliver
+    return messages;
+  }
+
+  public void seedQueue(String queueName, int messageCount) throws Exception {
+
+    ConnectionFactory factory = new ConnectionFactory();
+    factory.setHost(rabbitMqConfiguration.getRabbitMqHost());
+    factory.setPort(rabbitMqConfiguration.getRabbitMqPort());
+
+    try (Connection connection = factory.newConnection();
+        Channel channel = connection.createChannel()) {
+
+      channel.queueDeclare(queueName, true, false, false, null);
+
+      for (int i = 0; i < messageCount; i++) {
+        String message = String.format("{\"Id\":%d,\"Payload\":\"String-data-%d\"}", i, i);
+        channel.basicPublish("", queueName, null, message.getBytes());
+      }
+    }
+  }
+
+  public void clearQueue(String queueName) throws Exception {
+
+    ConnectionFactory factory = new ConnectionFactory();
+    factory.setHost(rabbitMqConfiguration.getRabbitMqHost());
+    factory.setPort(rabbitMqConfiguration.getRabbitMqPort());
+
+    try (Connection connection = factory.newConnection();
+        Channel channel = connection.createChannel()) {
+
+      channel.queueDeclare(queueName, true, false, false, null);
+      channel.queuePurge(queueName);
+    }
   }
 }

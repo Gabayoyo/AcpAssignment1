@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import software.amazon.awssdk.core.Response;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import uk.ac.ed.inf.acpAssignment.configuration.SystemEnvironment;
@@ -308,6 +309,28 @@ public class CoreRestController {
             rabbitMqService.sendMessages(queueName, messageCount);
             return new ResponseEntity<>(HttpStatus.OK);
         } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+     }
+
+     @GetMapping("messages/rabbitmq/{queueName}/{timeoutInMsec}")
+    public ResponseEntity<?> getMessagesRabbit(@PathVariable String queueName,
+        @PathVariable int timeoutInMsec) {
+        try {
+            List<String> messages = rabbitMqService.getMessages(queueName, timeoutInMsec);
+            return new ResponseEntity<>(messages, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+     }
+
+     @GetMapping("messages/sorted/rabbitmq/{queueName}/{messagesToConsider}")
+    public ResponseEntity<?> getMessagesToConsider(@PathVariable String queueName,
+         @PathVariable int messagesToConsider) {
+        try {
+            List<String> messages = rabbitMqService.readSortedMessages(queueName, messagesToConsider);
+            return  new ResponseEntity<>(messages, HttpStatus.OK);
+        } catch  (Exception e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
      }

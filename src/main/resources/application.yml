@@ -70,10 +70,12 @@ acp:
   sqs-table-in-dynamodb: acp-sqs-table
 
 kafka:
-  bootstrap-servers: localhost:9092
+  bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
   acks: all
   key-serializer: org.apache.kafka.common.serialization.StringSerializer
   value-serializer: org.apache.kafka.common.serialization.StringSerializer
+  group-id: test-group
+  auto-offset-reset: earliest
 
 rabbitmq:
   host: ${RABBITMQ_HOST:localhost}

@@ -13,7 +13,6 @@ import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.Channel;
 import uk.ac.ed.inf.acpAssignment.configuration.RabbitMqConfiguration;
-import uk.ac.ed.inf.acpAssignment.configuration.SystemEnvironment;
 import uk.ac.ed.inf.acpAssignment.dto.MessageWrapper;
 
 @Slf4j
@@ -21,11 +20,9 @@ import uk.ac.ed.inf.acpAssignment.dto.MessageWrapper;
 public class RabbitMqService {
 
   private final RabbitMqConfiguration rabbitMqConfiguration;
-  private final SystemEnvironment systemEnvironment;
 
-  public RabbitMqService(RabbitMqConfiguration rabbitMqConfiguration, SystemEnvironment systemEnvironment) {
+  public RabbitMqService(RabbitMqConfiguration rabbitMqConfiguration) {
     this.rabbitMqConfiguration = rabbitMqConfiguration;
-    this.systemEnvironment = systemEnvironment;
   }
 
   public void sendMessages(String queueName, int messageCount) throws Exception {
@@ -37,7 +34,7 @@ public class RabbitMqService {
       channel.queueDeclare(queueName, true, false, false, null);
 
       for (int i = 0; i < messageCount; i++) {
-        String message = String.format("{\"uid\":\"%s\",\"counter\":%d}", queueName, i);
+        String message = String.format("{\"uid\":\"%s\",\"counter\":%d}", "s2417814", i);
         channel.basicPublish("", queueName, null, message.getBytes());
         log.info("Sent message: {}", message);
       }
@@ -45,7 +42,7 @@ public class RabbitMqService {
     }
   }
 
-  public List<String> getMessages(String queueName, int timeoutInMsec) throws Exception {
+  public List<String> getMessages(String queueName, long timeoutInMsec) throws Exception {
     List<String> messages = new ArrayList<>();
 
     ConnectionFactory factory = new ConnectionFactory();

@@ -23,6 +23,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.Objects;
 import uk.ac.ed.inf.acpAssignment.dto.UrlPath;
+import uk.ac.ed.inf.acpAssignment.service.KafkaService;
 import uk.ac.ed.inf.acpAssignment.service.RabbitMqService;
 import uk.ac.ed.inf.acpAssignment.utils.DroneUtils;
 import uk.ac.ed.inf.acpAssignment.utils.JsonUtils;
@@ -48,6 +49,7 @@ public class CoreRestController {
     private final DynamoDbService dynamoDbService;
     private final PostgresService postgresService;
     private final RabbitMqService rabbitMqService;
+    private final KafkaService kafkaService;
 
     /**
      * Retrieves the ILP service endpoint URL from the system environment.
@@ -77,13 +79,14 @@ public class CoreRestController {
      */
     public CoreRestController(SystemEnvironment acpSystemEnvironment, S3Service s3Service,
         DynamoDbService dynamoDbService, PostgresService postgresService,
-        RabbitMqService rabbitMqService) {
+        RabbitMqService rabbitMqService, KafkaService kafkaService) {
         this.acpSystemEnvironment = acpSystemEnvironment;
         this.s3Service = s3Service;
         this.jsonUtils = new JsonUtils();
         this.dynamoDbService = dynamoDbService;
         this.postgresService = postgresService;
         this.rabbitMqService = rabbitMqService;
+        this.kafkaService = kafkaService;
     }
 
     /**
@@ -315,7 +318,7 @@ public class CoreRestController {
 
      @GetMapping("messages/rabbitmq/{queueName}/{timeoutInMsec}")
     public ResponseEntity<?> getMessagesRabbit(@PathVariable String queueName,
-        @PathVariable int timeoutInMsec) {
+        @PathVariable long timeoutInMsec) {
         try {
             List<String> messages = rabbitMqService.getMessages(queueName, timeoutInMsec);
             return new ResponseEntity<>(messages, HttpStatus.OK);
@@ -331,6 +334,27 @@ public class CoreRestController {
             List<String> messages = rabbitMqService.readSortedMessages(queueName, messagesToConsider);
             return  new ResponseEntity<>(messages, HttpStatus.OK);
         } catch  (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+     }
+
+     @PutMapping("messages/kafka/{writeTopic}/{messageCount}")
+    public ResponseEntity<?> sendMessagesKafka(@PathVariable String writeTopic,
+        @PathVariable int messageCount) {
+        try {
+            kafkaService.sendMessages(writeTopic, messageCount);
+            return new ResponseEntity<>(HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+     }
+
+     @GetMapping("messages/kafka/{readTopic}/{timeoutInMsec}")
+    public ResponseEntity<?> getMessagesKafka(@PathVariable String readTopic,
+        @PathVariable long timeoutInMsec) {
+        try {
+
+        } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
      }

@@ -1,7 +1,10 @@
 package uk.ac.ed.inf.acpAssignment.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Properties;
 import lombok.extern.slf4j.Slf4j;
@@ -64,5 +67,40 @@ public class KafkaService {
       }
     }
     return messages;
+  }
+
+  public List<String> getSortedMessages(String topic, int messagesToConsider) throws Exception {
+
+    List<JsonNode> buffer = new ArrayList<>();
+    ObjectMapper mapper = new ObjectMapper();
+
+    try (KafkaConsumer<String, String> consumer =
+        new KafkaConsumer<>(kafkaConsumerProperties)) {
+      consumer.subscribe(List.of(topic));
+
+      long hardDeadline = System.currentTimeMillis() + 5000;
+
+      while (buffer.size() < messagesToConsider &&
+          System.currentTimeMillis() < hardDeadline) {
+
+        ConsumerRecords<String, String> records =
+            consumer.poll(Duration.ofMillis(100));
+
+        for (ConsumerRecord<String, String> record : records) {
+          JsonNode node = mapper.readTree(record.value());
+          buffer.add(node);
+
+          if (buffer.size() >= messagesToConsider) break;
+        }
+      }
+    }
+    buffer.sort(Comparator.comparingInt(n -> n.get("Id").asInt()));
+
+    List<String> result = new ArrayList<>();
+    for (JsonNode node : buffer) {
+      result.add(node.toString());
+    }
+
+    return result;
   }
 }

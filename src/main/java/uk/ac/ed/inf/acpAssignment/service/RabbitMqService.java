@@ -66,7 +66,7 @@ public class RabbitMqService {
     return messages;
   }
 
-  public List<String> readSortedMessages(String queueName, int messagesToConsider) throws Exception {
+  public List<String> getSortedMessages(String queueName, int messagesToConsider) throws Exception {
 
     List<String> messages = new ArrayList<>();
     List<MessageWrapper> parsedMessages = new ArrayList<>();

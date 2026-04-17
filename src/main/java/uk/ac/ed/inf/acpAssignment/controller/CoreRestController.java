@@ -11,7 +11,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import software.amazon.awssdk.core.Response;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import uk.ac.ed.inf.acpAssignment.configuration.SystemEnvironment;
@@ -328,10 +327,11 @@ public class CoreRestController {
      }
 
      @GetMapping("messages/sorted/rabbitmq/{queueName}/{messagesToConsider}")
-    public ResponseEntity<?> getMessagesToConsider(@PathVariable String queueName,
+    public ResponseEntity<?> getMessagesToConsiderRabbit(@PathVariable String queueName,
          @PathVariable int messagesToConsider) {
         try {
-            List<String> messages = rabbitMqService.readSortedMessages(queueName, messagesToConsider);
+            List<String> messages = rabbitMqService.getSortedMessages(queueName,
+                messagesToConsider);
             return  new ResponseEntity<>(messages, HttpStatus.OK);
         } catch  (Exception e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
@@ -359,4 +359,15 @@ public class CoreRestController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
      }
+
+    @GetMapping("messages/sorted/kafka/{topic}/{messagesToConsider}")
+    public ResponseEntity<?> getMessagesToConsiderKafka(@PathVariable String topic,
+        @PathVariable int messagesToConsider) {
+        try {
+            List<String> messages = kafkaService.getSortedMessages(topic, messagesToConsider);
+            return  new ResponseEntity<>(messages, HttpStatus.OK);
+        } catch  (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
 }

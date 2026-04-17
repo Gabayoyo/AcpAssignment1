@@ -37,6 +37,11 @@ public class KafkaConfiguration {
   @Value("${kafka.enable-auto-commit:true}")
   private String enableAutoCommit;
 
+  @Bean(name = "kafkaBootstrapServers")
+  public String kafkaBootstrapServers() {
+    return bootstrapServers;
+  }
+
   @Bean(name = "kafkaProducerProperties")
   public Properties kafkaProducerProperties() {
     Properties props = new Properties();

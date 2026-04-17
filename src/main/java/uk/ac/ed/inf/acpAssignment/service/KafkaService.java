@@ -78,7 +78,7 @@ public class KafkaService {
         new KafkaConsumer<>(kafkaConsumerProperties)) {
       consumer.subscribe(List.of(topic));
 
-      long hardDeadline = System.currentTimeMillis() + 5000;
+      long hardDeadline = System.currentTimeMillis() + 10000;
 
       while (buffer.size() < messagesToConsider &&
           System.currentTimeMillis() < hardDeadline) {
@@ -102,5 +102,18 @@ public class KafkaService {
     }
 
     return result;
+  }
+
+  public void seedTopic(String topic, int count) {
+    try (KafkaProducer<String, String> producer =
+        new KafkaProducer<>(kafkaProducerProperties)) {
+
+      for (int i = 0; i < count; i++) {
+        String message = String.format("{\"Id\":%d,\"Payload\":\"String-data-%d\"}", i, i);
+        producer.send(new ProducerRecord<>(topic, message));
+      }
+
+      producer.flush();
+    }
   }
 }

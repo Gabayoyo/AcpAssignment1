@@ -22,13 +22,22 @@ public class KafkaConfiguration {
   @Value("${kafka.value-serializer}")
   private String valueSerializer;
 
+  @Value("${kafka.key-deserializer}")
+  private String keyDeserializer;
+
+  @Value("${kafka.value-deserializer}")
+  private String valueDeserializer;
+
   @Value("${kafka.group-id:assignment-consumer}")
   private String groupId;
 
   @Value("${kafka.auto-offset-reset:earliest}")
   private String autoOffsetReset;
 
-  @Bean
+  @Value("${kafka.enable-auto-commit:true}")
+  private String enableAutoCommit;
+
+  @Bean(name = "kafkaProducerProperties")
   public Properties kafkaProducerProperties() {
     Properties props = new Properties();
     props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
@@ -38,15 +47,15 @@ public class KafkaConfiguration {
     return props;
   }
 
-  @Bean
+  @Bean(name = "kafkaConsumerProperties")
   public Properties kafkaConsumerProperties() {
     Properties props = new Properties();
     props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
     props.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
     props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, autoOffsetReset);
-    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, keySerializer);
-    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,  valueSerializer);
-    props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, true);
+    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, keyDeserializer);
+    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, valueDeserializer);
+    props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, enableAutoCommit);
     return props;
   }
 }

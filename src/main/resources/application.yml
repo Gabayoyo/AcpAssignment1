@@ -74,8 +74,11 @@ kafka:
   acks: all
   key-serializer: org.apache.kafka.common.serialization.StringSerializer
   value-serializer: org.apache.kafka.common.serialization.StringSerializer
+  key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+  value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
   group-id: test-group
   auto-offset-reset: earliest
+  enable-auto-commit: true
 
 rabbitmq:
   host: ${RABBITMQ_HOST:localhost}

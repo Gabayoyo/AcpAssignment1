@@ -21,8 +21,12 @@ public class KafkaService {
   public Properties kafkaProducerProperties;
   public Properties kafkaConsumerProperties;
 
-  public KafkaService(final KafkaConfiguration kafkaConfiguration) {
+  public KafkaService(KafkaConfiguration kafkaConfiguration,
+                      Properties kafkaProducerProperties,
+                      Properties kafkaConsumerProperties) {
     this.kafkaConfiguration = kafkaConfiguration;
+    this.kafkaProducerProperties = kafkaProducerProperties;
+    this.kafkaConsumerProperties = kafkaConsumerProperties;
   }
 
   public void sendMessages(String writeTopic, int messageCount) {
@@ -39,28 +43,26 @@ public class KafkaService {
   }
 
   public List<String> getMessages(String writeTopic, long timeoutInMsec) {
-      List<String> results = new ArrayList<>();
-      long endTime = System.currentTimeMillis() + timeoutInMsec;
-      long pollTimeout = 100;
 
-      try (KafkaConsumer<String, String> consumer =
-          new KafkaConsumer<>(kafkaConsumerProperties)) {
+    List<String> messages = new ArrayList<>();
+    long deadline = System.currentTimeMillis() + timeoutInMsec - 250;
 
-        consumer.subscribe(List.of(writeTopic));
+    try (KafkaConsumer<String, String> consumer =
+        new KafkaConsumer<>(kafkaConsumerProperties)) {
+      consumer.subscribe(List.of(writeTopic));
+      consumer.poll(Duration.ofMillis(0));
 
-        while (System.currentTimeMillis() < endTime) {
-          long remaining = endTime - System.currentTimeMillis();
-          if (remaining <= 0) break;
+      while (System.currentTimeMillis() < deadline) {
+        long remaining = deadline - System.currentTimeMillis();
+        if (remaining <= 250) break;
 
-          ConsumerRecords<String, String> records =
-              consumer.poll(Duration.ofMillis(Math.min(pollTimeout, remaining)));
+        ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
 
-          for (ConsumerRecord<String, String> record : records) {
-            results.add(record.value());
-          }
-          if (System.currentTimeMillis() + 50 > endTime) break;
+        for (ConsumerRecord<String, String> record : records) {
+          messages.add(record.value());
         }
-      return results;
+      }
     }
+    return messages;
   }
 }

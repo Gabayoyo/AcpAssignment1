@@ -353,7 +353,8 @@ public class CoreRestController {
     public ResponseEntity<?> getMessagesKafka(@PathVariable String readTopic,
         @PathVariable long timeoutInMsec) {
         try {
-
+            List<String> messages = kafkaService.getMessages(readTopic, timeoutInMsec);
+            return new ResponseEntity<>(messages, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }

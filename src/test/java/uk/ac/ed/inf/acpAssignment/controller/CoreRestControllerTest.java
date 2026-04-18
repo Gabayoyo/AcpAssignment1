@@ -1,11 +1,13 @@
 package uk.ac.ed.inf.acpAssignment.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -14,7 +16,9 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import uk.ac.ed.inf.acpAssignment.service.DynamoDbService;
+import uk.ac.ed.inf.acpAssignment.service.KafkaService;
 import uk.ac.ed.inf.acpAssignment.service.PostgresService;
+import uk.ac.ed.inf.acpAssignment.service.RabbitMqService;
 import uk.ac.ed.inf.acpAssignment.service.S3Service;
 
 @SpringBootTest(properties = {
@@ -38,7 +42,10 @@ public class CoreRestControllerTest {
   private DynamoDbService dynamoDbService;
 
   @Autowired
-  private PostgresService postgresService;
+  private RabbitMqService rabbitMqService;
+
+  @Autowired
+  private KafkaService kafkaService;
 
   @Autowired
   JdbcTemplate jdbcTemplate;
@@ -237,4 +244,146 @@ public class CoreRestControllerTest {
             + "{\"id\":\"10\",\"name\":\"Drone 10\",\"capability\":{\"cooling\":false,\"heating\":false,\"capacity\":12.0,\"maxMoves\":1500,\"costPerMove\":0.07,\"costInitial\":1.4,\"costFinal\":3.5},\"costPer100Moves\":11.90}]\n"));
   }
 
+  @Test
+  public void testPutAndGetRabbitMqMessages() throws Exception {
+
+    var queueName = "test-queue-" + System.currentTimeMillis();
+    coreRestController.sendMessagesRabbit(queueName, 5);
+
+    List<String> messages = rabbitMqService.getMessages(queueName, 10000);
+    assertEquals(5, messages.size());
+
+    for (int i = 0; i < 5; i++) {
+      String expected = String.format("{\"uid\":\"%s\",\"counter\":%d}", "s2417814", i);
+      assertEquals(expected, messages.get(i));
+    }
+  }
+
+  @Test
+  public void testGetRabbitMqMessagesEmpty() {
+
+    var queueName = "empty-queue-" + System.currentTimeMillis();
+    var response = coreRestController.getMessagesRabbit(queueName, 10000);
+
+    assertEquals(200, response.getStatusCode().value());
+    List<String> messages = (List<String>) response.getBody();
+    assertTrue(messages.isEmpty());
+  }
+
+  @Test
+  public void testRabbitMqDoesNotExceedTimeout() throws Exception {
+
+    var queueName = "timing-queue-" + System.currentTimeMillis();
+    long timeout = 1000;
+
+    long start = System.currentTimeMillis();
+    coreRestController.getMessagesRabbit(queueName, timeout);
+    long duration = System.currentTimeMillis() - start;
+
+    assertTrue(duration <= timeout + 200);
+  }
+
+  @Test
+  public void testPutAndGetKafkaMessages() throws Exception {
+
+    var topic = "test-topic-" + System.currentTimeMillis();
+    var messageCount = 5;
+
+    coreRestController.sendMessagesKafka(topic, messageCount);
+
+    List<String> messages = kafkaService.getMessages(topic, 10000);
+
+    assertEquals(messageCount, messages.size());
+
+    for (int i = 0; i < messageCount; i++) {
+      String expected = String.format(
+          "{\"uid\":\"%s\",\"counter\":%d}",
+          "s2417814",
+          i
+      );
+
+      assertEquals(expected, messages.get(i));
+    }
+  }
+
+  @Test
+  public void testGetKafkaMessagesNoTopic() throws Exception {
+
+    var topic = "empty-topic-" + System.currentTimeMillis();
+    long timeout = 1000;
+
+    var response = coreRestController.getMessagesKafka(topic, timeout);
+    assertEquals(404, response.getStatusCode().value());
+  }
+
+  @Test
+  public void testKafkaDoesNotExceedTimeout5000() throws Exception {
+
+    var queueName = "timing-queue-" + System.currentTimeMillis();
+    long timeout = 5000;
+
+    long start = System.currentTimeMillis();
+    coreRestController.getMessagesKafka(queueName, timeout);
+    long duration = System.currentTimeMillis() - start;
+
+    assertTrue(duration <= timeout + 200);
+  }
+
+  @Test
+  public void testKafkaDoesNotExceedTimeout500() throws Exception {
+
+    var queueName = "timing-queue-" + System.currentTimeMillis();
+    long timeout = 500;
+
+    long start = System.currentTimeMillis();
+    coreRestController.getMessagesKafka(queueName, timeout);
+    long duration = System.currentTimeMillis() - start;
+
+    assertTrue(duration <= timeout + 200);
+  }
+
+  @Test
+  public void testGetSortedRabbitMqMessages() throws Exception {
+
+    var queueName = "sorted-queue-" + System.currentTimeMillis();
+    int messageCount = 5;
+    rabbitMqService.seedQueue(queueName, messageCount);
+
+    var response = coreRestController.getMessagesToConsiderRabbit(queueName, messageCount);
+    assertEquals(200, response.getStatusCode().value());
+
+    List<String> messages = (List<String>) response.getBody();
+    assertEquals(messageCount, messages.size());
+
+    for (int i = 0; i < messageCount; i++) {
+      String expected = String.format(
+          "{\"Id\":%d,\"Payload\":\"String-data-%d\"}",
+          i, i
+      );
+      assertEquals(expected, messages.get(i));
+    }
+  }
+
+  @Test
+  public void testGetSortedKafkaMessages() throws Exception {
+
+    var topic = "sorted-topic-" + System.currentTimeMillis();
+    int messageCount = 5;
+    kafkaService.seedTopic(topic, messageCount);
+
+    var response = coreRestController.getMessagesToConsiderKafka(topic, messageCount);
+    assertEquals(200, response.getStatusCodeValue());
+
+    List<String> messages = (List<String>) response.getBody();
+    assertEquals(messageCount, messages.size());
+
+    // ✔ Check sorting by Id
+    for (int i = 0; i < messageCount; i++) {
+      String expected = String.format(
+          "{\"Id\":%d,\"Payload\":\"String-data-%d\"}",
+          i, i
+      );
+      assertEquals(expected, messages.get(i));
+    }
+  }
 }

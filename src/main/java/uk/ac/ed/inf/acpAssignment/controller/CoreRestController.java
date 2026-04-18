@@ -55,6 +55,8 @@ public class CoreRestController {
     private final KafkaService kafkaService;
     private final SplitterService splitterService;
     private final TransformService transformService;
+    private final String redisHost;
+    private final Integer redisPort;
 
     /**
      * Retrieves the ILP service endpoint URL from the system environment.
@@ -85,7 +87,8 @@ public class CoreRestController {
     public CoreRestController(SystemEnvironment acpSystemEnvironment, S3Service s3Service,
         DynamoDbService dynamoDbService, PostgresService postgresService,
         RabbitMqService rabbitMqService, KafkaService kafkaService,
-        SplitterService splitterService, TransformService transformService) {
+        SplitterService splitterService, TransformService transformService, String redisHost,
+        Integer redisPort) {
         this.acpSystemEnvironment = acpSystemEnvironment;
         this.s3Service = s3Service;
         this.jsonUtils = new JsonUtils();
@@ -95,6 +98,8 @@ public class CoreRestController {
         this.kafkaService = kafkaService;
         this.splitterService = splitterService;
         this.transformService = transformService;
+        this.redisHost = redisHost;
+        this.redisPort = redisPort;
     }
 
     /**
@@ -398,5 +403,15 @@ public class CoreRestController {
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
+    }
+
+    @GetMapping("/redis/host")
+    public String getRedisHost() {
+        return redisHost;
+    }
+
+    @GetMapping("/redis/port")
+    public int getRedisPort() {
+        return redisPort;
     }
 }

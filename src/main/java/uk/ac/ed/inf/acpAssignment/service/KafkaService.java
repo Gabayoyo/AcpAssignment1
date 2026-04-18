@@ -13,6 +13,8 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.PartitionInfo;
+import org.apache.kafka.common.TopicPartition;
 import org.springframework.stereotype.Service;
 import uk.ac.ed.inf.acpAssignment.configuration.KafkaConfiguration;
 
@@ -45,27 +47,36 @@ public class KafkaService {
     }
   }
 
-  public List<String> getMessages(String writeTopic, long timeoutInMsec) {
+  public List<String> getMessages(String topic, long timeoutInMsec) {
 
     List<String> messages = new ArrayList<>();
-    long deadline = System.currentTimeMillis() + timeoutInMsec - 250;
+    long deadline = System.currentTimeMillis() + timeoutInMsec;
 
     try (KafkaConsumer<String, String> consumer =
         new KafkaConsumer<>(kafkaConsumerProperties)) {
-      consumer.subscribe(List.of(writeTopic));
-      consumer.poll(Duration.ofMillis(0));
+
+      List<PartitionInfo> partitions = consumer.partitionsFor(topic);
+      List<TopicPartition> topicPartitions = partitions.stream()
+          .map(p -> new TopicPartition(topic, p.partition()))
+          .toList();
+
+      consumer.assign(topicPartitions);
+      consumer.seekToBeginning(topicPartitions);
 
       while (System.currentTimeMillis() < deadline) {
-        long remaining = deadline - System.currentTimeMillis();
-        if (remaining <= 250) break;
 
-        ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
+        long remaining = deadline - System.currentTimeMillis();
+        if (remaining < 250) break;
+
+        ConsumerRecords<String, String> records =
+            consumer.poll(Duration.ofMillis(100));
 
         for (ConsumerRecord<String, String> record : records) {
           messages.add(record.value());
         }
       }
     }
+
     return messages;
   }
 

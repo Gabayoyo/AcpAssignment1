@@ -30,6 +30,6 @@ public class KafkaController {
 
   @GetMapping("/seed-topic/{number}")
   public void seedTopic(@PathVariable int number) {
-    kafkaService.seedTopic("test-topic", number);
+    kafkaService.seedTopic("test-topic-new", number);
   }
 }

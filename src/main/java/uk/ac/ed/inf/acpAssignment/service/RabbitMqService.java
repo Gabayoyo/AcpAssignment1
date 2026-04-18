@@ -8,12 +8,14 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.json.JSONObject;
 import org.springframework.stereotype.Service;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.Channel;
 import uk.ac.ed.inf.acpAssignment.configuration.RabbitMqConfiguration;
 import uk.ac.ed.inf.acpAssignment.dto.MessageWrapper;
+import uk.ac.ed.inf.acpAssignment.dto.TestMessage;
 
 @Slf4j
 @Service
@@ -135,6 +137,29 @@ public class RabbitMqService {
 
       channel.queueDeclare(queueName, true, false, false, null);
       channel.queuePurge(queueName);
+    }
+  }
+
+  public void seedQueueSplitter(String queueName, int count) throws Exception {
+
+    ObjectMapper mapper = new ObjectMapper();
+
+    ConnectionFactory factory = new ConnectionFactory();
+    factory.setHost(rabbitMqConfiguration.getRabbitMqHost());
+    factory.setPort(rabbitMqConfiguration.getRabbitMqPort());
+
+    try (Connection connection = factory.newConnection();
+        Channel channel = connection.createChannel()) {
+
+      channel.queueDeclare(queueName, true, false, false, null);
+
+      for (int i = 0; i < count; i++) {
+        TestMessage msg = new TestMessage(i, 0.1 * i, "seed-data-" + i);
+        String json = mapper.writeValueAsString(msg);
+
+        channel.basicPublish("", queueName, null, json.getBytes(StandardCharsets.UTF_8));
+      }
+
     }
   }
 }

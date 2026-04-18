@@ -16,6 +16,7 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import uk.ac.ed.inf.acpAssignment.configuration.SystemEnvironment;
 import uk.ac.ed.inf.acpAssignment.dto.Drone;
 import uk.ac.ed.inf.acpAssignment.dto.Restaurant;
+import uk.ac.ed.inf.acpAssignment.dto.SplitterRequest;
 import uk.ac.ed.inf.acpAssignment.dto.Tuple;
 
 import java.io.BufferedReader;
@@ -24,6 +25,7 @@ import java.util.Objects;
 import uk.ac.ed.inf.acpAssignment.dto.UrlPath;
 import uk.ac.ed.inf.acpAssignment.service.KafkaService;
 import uk.ac.ed.inf.acpAssignment.service.RabbitMqService;
+import uk.ac.ed.inf.acpAssignment.service.SplitterService;
 import uk.ac.ed.inf.acpAssignment.utils.DroneUtils;
 import uk.ac.ed.inf.acpAssignment.utils.JsonUtils;
 import uk.ac.ed.inf.acpAssignment.service.DynamoDbService;
@@ -49,6 +51,7 @@ public class CoreRestController {
     private final PostgresService postgresService;
     private final RabbitMqService rabbitMqService;
     private final KafkaService kafkaService;
+    private final SplitterService splitterService;
 
     /**
      * Retrieves the ILP service endpoint URL from the system environment.
@@ -78,7 +81,8 @@ public class CoreRestController {
      */
     public CoreRestController(SystemEnvironment acpSystemEnvironment, S3Service s3Service,
         DynamoDbService dynamoDbService, PostgresService postgresService,
-        RabbitMqService rabbitMqService, KafkaService kafkaService) {
+        RabbitMqService rabbitMqService, KafkaService kafkaService,
+        SplitterService splitterService) {
         this.acpSystemEnvironment = acpSystemEnvironment;
         this.s3Service = s3Service;
         this.jsonUtils = new JsonUtils();
@@ -86,6 +90,7 @@ public class CoreRestController {
         this.postgresService = postgresService;
         this.rabbitMqService = rabbitMqService;
         this.kafkaService = kafkaService;
+        this.splitterService = splitterService;
     }
 
     /**
@@ -367,6 +372,16 @@ public class CoreRestController {
             List<String> messages = kafkaService.getSortedMessages(topic, messagesToConsider);
             return  new ResponseEntity<>(messages, HttpStatus.OK);
         } catch  (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @PostMapping("/splitter")
+    public ResponseEntity<?> splitter(@RequestBody SplitterRequest request) {
+        try {
+            splitterService.process(request);
+            return new ResponseEntity<>(HttpStatus.OK);
+        } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }

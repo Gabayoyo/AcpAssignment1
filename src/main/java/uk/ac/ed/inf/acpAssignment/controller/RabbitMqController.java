@@ -49,4 +49,14 @@ public class RabbitMqController {
       return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
   }
+
+  @GetMapping("/seed-queue-splitter/{queueName}/{number}")
+  public ResponseEntity<?> seedQueueSplitter(@PathVariable String queueName, @PathVariable int number) {
+    try {
+      rabbitMqService.seedQueueSplitter(queueName, number);
+      return new ResponseEntity<>(HttpStatus.OK);
+    } catch  (Exception e) {
+      return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+  }
 }

@@ -193,6 +193,34 @@ public class TransformService {
     }
   }
 
+  public void sendTombstone(String queueName) throws Exception {
+
+    ObjectMapper mapper = new ObjectMapper();
+    ConnectionFactory factory = new ConnectionFactory();
+    factory.setHost(rabbitMqConfiguration.getRabbitMqHost());
+    factory.setPort(rabbitMqConfiguration.getRabbitMqPort());
+
+    try (Connection connection = factory.newConnection();
+        Channel channel = connection.createChannel();
+        Jedis jedis = new Jedis(redisConfiguration.redisHost(), redisConfiguration.redisPort())) {
+
+      jedis.flushDB();
+
+      ObjectNode msg = mapper.createObjectNode();
+      msg.put("key", "TOMBSTONE");
+
+      String json = mapper.writeValueAsString(msg);
+      channel.queueDeclare(queueName, true, false, false, null);
+
+      channel.basicPublish(
+          "",
+          queueName,
+          null,
+          json.getBytes(StandardCharsets.UTF_8)
+      );
+    }
+  }
+
   public void resetState() {
     totalMessagesWritten = 0;
     totalMessagesProcessed = 0;

@@ -42,6 +42,16 @@ public class TransformController {
     }
   }
 
+  @GetMapping("/tombstone/{queueName}")
+  public ResponseEntity<?> getTombstone(@PathVariable String queueName) {
+    try {
+      transformService.sendTombstone(queueName);
+      return new ResponseEntity<>(HttpStatus.OK);
+    } catch (Exception e) {
+      return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    }
+  }
+
   @GetMapping("/reset-state")
   public ResponseEntity<?> resetState() {
     transformService.resetState();

@@ -7,16 +7,15 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.GetResponse;
+import java.lang.annotation.Target;
 import java.nio.charset.StandardCharsets;
 import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.stereotype.Service;
 import redis.clients.jedis.Jedis;
 import uk.ac.ed.inf.acpAssignment.configuration.KafkaConfiguration;
 import uk.ac.ed.inf.acpAssignment.configuration.RabbitMqConfiguration;
 import uk.ac.ed.inf.acpAssignment.configuration.RedisConfiguration;
-import uk.ac.ed.inf.acpAssignment.dto.SplitterRequest;
-import uk.ac.ed.inf.acpAssignment.dto.TestMessage;
+import uk.ac.ed.inf.acpAssignment.dto.TransformMessage;
 import uk.ac.ed.inf.acpAssignment.dto.TransformRequest;
 
 @Service
@@ -51,9 +50,7 @@ public class TransformService {
 
     try (Jedis jedis = new Jedis(redisConfiguration.redisHost(), redisConfiguration.redisPort());
         Connection connection = factory.newConnection();
-        Channel channel = connection.createChannel();
-        KafkaProducer<String, String> producer =
-            new KafkaProducer<>(kafkaConfiguration.kafkaProducerProperties())) {
+        Channel channel = connection.createChannel();) {
 
       while (messagesRead < request.messageCount()) {
         GetResponse response = channel.basicGet(request.readQueue(), true);
@@ -137,5 +134,75 @@ public class TransformService {
         messagesRead++;
       }
     }
+  }
+
+  public void seedTransformMessages(String queueName, int count) throws Exception {
+
+    ObjectMapper mapper = new ObjectMapper();
+
+    ConnectionFactory factory = new ConnectionFactory();
+    factory.setHost(rabbitMqConfiguration.getRabbitMqHost());
+    factory.setPort(rabbitMqConfiguration.getRabbitMqPort());
+
+    try (Connection connection = factory.newConnection();
+        Channel channel = connection.createChannel()) {
+
+      channel.queueDeclare(queueName, true, false, false, null);
+
+      for (int i = 0; i < count; i++) {
+
+        TransformMessage msg = new TransformMessage(
+            "key-" + (i % 5),
+            i % 3 + 1,
+            100.0 + i
+        );
+
+        String json = mapper.writeValueAsString(msg);
+
+        channel.basicPublish(
+            "",
+            queueName,
+            null,
+            json.getBytes(StandardCharsets.UTF_8)
+        );
+      }
+    }
+  }
+
+  public void sendSingleMessage(String queueName, String key, int version, double value) throws Exception {
+
+    ObjectMapper mapper = new ObjectMapper();
+    ConnectionFactory factory = new ConnectionFactory();
+    factory.setHost(rabbitMqConfiguration.getRabbitMqHost());
+    factory.setPort(rabbitMqConfiguration.getRabbitMqPort());
+
+    try (Connection connection = factory.newConnection();
+        Channel channel = connection.createChannel()) {
+      channel.queueDeclare(queueName, true, false, false, null);
+      channel.queuePurge(queueName);
+
+      TransformMessage msg = new TransformMessage(key, version, value);
+      String json = mapper.writeValueAsString(msg);
+
+      channel.basicPublish(
+          "",
+          queueName,
+          null,
+          json.getBytes(StandardCharsets.UTF_8)
+      );
+    }
+  }
+
+  public void resetState() {
+    totalMessagesWritten = 0;
+    totalMessagesProcessed = 0;
+    totalRedisUpdates = 0;
+    totalValueWritten = 0.0;
+    totalAdded = 0.0;
+  }
+
+  public void resetDb() throws Exception {
+    Jedis jedis = new Jedis(redisConfiguration.redisHost(), redisConfiguration.redisPort());
+    jedis.flushDB();
   }
 }

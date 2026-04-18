@@ -17,6 +17,7 @@ import uk.ac.ed.inf.acpAssignment.configuration.SystemEnvironment;
 import uk.ac.ed.inf.acpAssignment.dto.Drone;
 import uk.ac.ed.inf.acpAssignment.dto.Restaurant;
 import uk.ac.ed.inf.acpAssignment.dto.SplitterRequest;
+import uk.ac.ed.inf.acpAssignment.dto.TransformRequest;
 import uk.ac.ed.inf.acpAssignment.dto.Tuple;
 
 import java.io.BufferedReader;
@@ -26,6 +27,7 @@ import uk.ac.ed.inf.acpAssignment.dto.UrlPath;
 import uk.ac.ed.inf.acpAssignment.service.KafkaService;
 import uk.ac.ed.inf.acpAssignment.service.RabbitMqService;
 import uk.ac.ed.inf.acpAssignment.service.SplitterService;
+import uk.ac.ed.inf.acpAssignment.service.TransformService;
 import uk.ac.ed.inf.acpAssignment.utils.DroneUtils;
 import uk.ac.ed.inf.acpAssignment.utils.JsonUtils;
 import uk.ac.ed.inf.acpAssignment.service.DynamoDbService;
@@ -52,6 +54,7 @@ public class CoreRestController {
     private final RabbitMqService rabbitMqService;
     private final KafkaService kafkaService;
     private final SplitterService splitterService;
+    private final TransformService transformService;
 
     /**
      * Retrieves the ILP service endpoint URL from the system environment.
@@ -82,7 +85,7 @@ public class CoreRestController {
     public CoreRestController(SystemEnvironment acpSystemEnvironment, S3Service s3Service,
         DynamoDbService dynamoDbService, PostgresService postgresService,
         RabbitMqService rabbitMqService, KafkaService kafkaService,
-        SplitterService splitterService) {
+        SplitterService splitterService, TransformService transformService) {
         this.acpSystemEnvironment = acpSystemEnvironment;
         this.s3Service = s3Service;
         this.jsonUtils = new JsonUtils();
@@ -91,6 +94,7 @@ public class CoreRestController {
         this.rabbitMqService = rabbitMqService;
         this.kafkaService = kafkaService;
         this.splitterService = splitterService;
+        this.transformService = transformService;
     }
 
     /**
@@ -380,6 +384,16 @@ public class CoreRestController {
     public ResponseEntity<?> splitter(@RequestBody SplitterRequest request) {
         try {
             splitterService.process(request);
+            return new ResponseEntity<>(HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @PostMapping("/transformMessages")
+    public ResponseEntity<?> transformMessages(@RequestBody TransformRequest request) {
+        try {
+            transformService.process(request);
             return new ResponseEntity<>(HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);

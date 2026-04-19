@@ -7,12 +7,10 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.GetResponse;
-import java.lang.annotation.Target;
 import java.nio.charset.StandardCharsets;
-import org.apache.kafka.clients.producer.KafkaProducer;
+import lombok.Getter;
 import org.springframework.stereotype.Service;
 import redis.clients.jedis.Jedis;
-import uk.ac.ed.inf.acpAssignment.configuration.KafkaConfiguration;
 import uk.ac.ed.inf.acpAssignment.configuration.RabbitMqConfiguration;
 import uk.ac.ed.inf.acpAssignment.configuration.RedisConfiguration;
 import uk.ac.ed.inf.acpAssignment.dto.TransformMessage;
@@ -24,21 +22,25 @@ public class TransformService {
   private final RedisConfiguration redisConfiguration;
   private final RabbitMqConfiguration rabbitMqConfiguration;
 
-  private final KafkaConfiguration kafkaConfiguration;
-
+  @Getter
   private long totalMessagesWritten = 0;
+
+  @Getter
   private long totalMessagesProcessed = 0;
+
+  @Getter
   private long totalRedisUpdates = 0;
 
+  @Getter
   private double totalValueWritten = 0.0;
+
+  @Getter
   private double totalAdded = 0.0;
 
   public TransformService(RedisConfiguration redisConfiguration,
-                         RabbitMqConfiguration rabbitMqConfiguration,
-                         KafkaConfiguration kafkaConfiguration) {
+                         RabbitMqConfiguration rabbitMqConfiguration) {
     this.redisConfiguration = redisConfiguration;
     this.rabbitMqConfiguration = rabbitMqConfiguration;
-    this.kafkaConfiguration = kafkaConfiguration;
   }
 
   public void process(TransformRequest request) throws Exception {

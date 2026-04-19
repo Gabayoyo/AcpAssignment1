@@ -318,7 +318,7 @@ public class CoreRestController {
         }
      }
 
-     @PutMapping("messages/rabbitmq/{queueName}/{messageCount}")
+     @PutMapping("/messages/rabbitmq/{queueName}/{messageCount}")
     public ResponseEntity<?> sendMessagesRabbit(@PathVariable String queueName,
          @PathVariable int messageCount) {
         try {
@@ -329,7 +329,7 @@ public class CoreRestController {
         }
      }
 
-     @GetMapping("messages/rabbitmq/{queueName}/{timeoutInMsec}")
+     @GetMapping("/messages/rabbitmq/{queueName}/{timeoutInMsec}")
     public ResponseEntity<?> getMessagesRabbit(@PathVariable String queueName,
         @PathVariable long timeoutInMsec) {
         try {
@@ -340,7 +340,7 @@ public class CoreRestController {
         }
      }
 
-     @GetMapping("messages/sorted/rabbitmq/{queueName}/{messagesToConsider}")
+     @GetMapping("/messages/sorted/rabbitmq/{queueName}/{messagesToConsider}")
     public ResponseEntity<?> getMessagesToConsiderRabbit(@PathVariable String queueName,
          @PathVariable int messagesToConsider) {
         try {
@@ -352,7 +352,7 @@ public class CoreRestController {
         }
      }
 
-     @PutMapping("messages/kafka/{writeTopic}/{messageCount}")
+     @PutMapping("/messages/kafka/{writeTopic}/{messageCount}")
     public ResponseEntity<?> sendMessagesKafka(@PathVariable String writeTopic,
         @PathVariable int messageCount) {
         try {
@@ -363,7 +363,7 @@ public class CoreRestController {
         }
      }
 
-     @GetMapping("messages/kafka/{readTopic}/{timeoutInMsec}")
+     @GetMapping("/messages/kafka/{readTopic}/{timeoutInMsec}")
     public ResponseEntity<?> getMessagesKafka(@PathVariable String readTopic,
         @PathVariable long timeoutInMsec) {
         try {
@@ -374,7 +374,7 @@ public class CoreRestController {
         }
      }
 
-    @GetMapping("messages/sorted/kafka/{topic}/{messagesToConsider}")
+    @GetMapping("/messages/sorted/kafka/{topic}/{messagesToConsider}")
     public ResponseEntity<?> getMessagesToConsiderKafka(@PathVariable String topic,
         @PathVariable int messagesToConsider) {
         try {

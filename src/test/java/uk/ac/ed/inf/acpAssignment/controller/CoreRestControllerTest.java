@@ -1,12 +1,16 @@
 package uk.ac.ed.inf.acpAssignment.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +21,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import redis.clients.jedis.Jedis;
 import uk.ac.ed.inf.acpAssignment.dto.SplitterRequest;
+import uk.ac.ed.inf.acpAssignment.dto.TransformRequest;
 import uk.ac.ed.inf.acpAssignment.service.DynamoDbService;
 import uk.ac.ed.inf.acpAssignment.service.KafkaService;
 import uk.ac.ed.inf.acpAssignment.service.RabbitMqService;
@@ -543,6 +548,159 @@ public class CoreRestControllerTest {
       assertEquals("15.00", jedis.get("average_odd"));
       assertEquals("{\"Id\":1,\"Value\":10.0,\"AdditionalData\":\"odd\"}", jedis.hget(redisOdd, "1"));
       assertEquals("{\"Id\":3,\"Value\":20.0,\"AdditionalData\":\"odd\"}", jedis.hget(redisOdd, "3"));
+    }
+  }
+
+  @Test
+  public void testTransformSingle() throws Exception {
+
+    var readQueue = "transform-read-" + System.currentTimeMillis();
+    var writeQueue = "transform-write-" + System.currentTimeMillis();
+
+    rabbitMqService.clearQueue(readQueue);
+    rabbitMqService.clearQueue(writeQueue);
+
+    try (Jedis jedis = new Jedis("localhost", 6379)) {
+      jedis.flushDB();
+
+      transformService.sendSingleMessage(readQueue, "ABC", 1, 100);
+      TransformRequest request = new TransformRequest(readQueue, writeQueue, 1);
+      coreRestController.transformMessages(request);
+
+      List<String> output = rabbitMqService.getMessages(writeQueue, 10000);
+
+      assertEquals(1, output.size());
+
+      ObjectMapper mapper = new ObjectMapper();
+      JsonNode node = mapper.readTree(output.getFirst());
+
+      assertEquals("ABC", node.get("key").asText());
+      assertEquals(1, node.get("version").asInt());
+      assertEquals(110.5, node.get("value").asDouble(), 0.001);
+
+      assertEquals(1, transformService.getTotalMessagesWritten());
+      assertEquals(1, transformService.getTotalMessagesProcessed());
+      assertEquals(1, transformService.getTotalRedisUpdates());
+      assertEquals(110.5, transformService.getTotalValueWritten());
+      assertEquals(10.5, transformService.getTotalAdded());
+    }
+  }
+
+  @Test
+  public void testTransformDouble() throws Exception {
+
+    var readQueue = "transform-read-" + System.currentTimeMillis();
+    var writeQueue = "transform-write-" + System.currentTimeMillis();
+
+    rabbitMqService.clearQueue(readQueue);
+    rabbitMqService.clearQueue(writeQueue);
+
+    try (Jedis jedis = new Jedis("localhost", 6379)) {
+      jedis.flushDB();
+
+      transformService.sendSingleMessage(readQueue, "ABC", 1, 100);
+      TransformRequest request = new TransformRequest(readQueue, writeQueue, 1);
+      coreRestController.transformMessages(request);
+
+      rabbitMqService.clearQueue(readQueue);
+      rabbitMqService.clearQueue(writeQueue);
+      transformService.sendSingleMessage(readQueue, "ABC", 1, 200);
+      coreRestController.transformMessages(request);
+
+      List<String> output = rabbitMqService.getMessages(writeQueue, 10000);
+
+      ObjectMapper mapper = new ObjectMapper();
+      JsonNode node = mapper.readTree(output.getFirst());
+
+      assertEquals("ABC", node.get("key").asText());
+      assertEquals(1, node.get("version").asInt());
+      assertEquals(200, node.get("value").asDouble(), 0.001);
+
+      assertEquals(2, transformService.getTotalMessagesWritten());
+      assertEquals(1, transformService.getTotalMessagesProcessed());
+      assertEquals(1, transformService.getTotalRedisUpdates());
+      assertEquals(310.5, transformService.getTotalValueWritten());
+      assertEquals(10.5, transformService.getTotalAdded());
+    }
+  }
+
+  @Test
+  public void testTransformTombstone() throws Exception {
+
+    var readQueue = "transform-read-" + System.currentTimeMillis();
+    var writeQueue = "transform-write-" + System.currentTimeMillis();
+
+    rabbitMqService.clearQueue(readQueue);
+    rabbitMqService.clearQueue(writeQueue);
+
+    try (Jedis jedis = new Jedis("localhost", 6379)) {
+      jedis.flushDB();
+
+      transformService.sendSingleMessage(readQueue, "ABC", 1, 100);
+      TransformRequest request = new TransformRequest(readQueue, writeQueue, 1);
+      coreRestController.transformMessages(request);
+
+      rabbitMqService.clearQueue(readQueue);
+      rabbitMqService.clearQueue(writeQueue);
+      transformService.sendTombstone(readQueue);
+      coreRestController.transformMessages(request);
+
+      List<String> output = rabbitMqService.getMessages(writeQueue, 10000);
+
+      ObjectMapper mapper = new ObjectMapper();
+      JsonNode node = mapper.readTree(output.getFirst());
+
+      assertEquals(1, node.get("totalMessagesWritten").asInt());
+      assertEquals(1, node.get("totalMessagesProcessed").asInt());
+      assertEquals(2, node.get("totalRedisUpdates").asInt());
+      assertEquals(110.5, node.get("totalValueWritten").asDouble(), 0.001);
+      assertEquals(10.5, node.get("totalAdded").asDouble(), 0.001);
+
+      assertNull(jedis.get("ABC"));
+
+      assertNotEquals(0,  transformService.getTotalMessagesWritten());
+      assertNotEquals(0,  transformService.getTotalMessagesProcessed());
+      assertNotEquals(0,  transformService.getTotalRedisUpdates());
+      assertNotEquals(0,  transformService.getTotalValueWritten());
+      assertNotEquals(0,  transformService.getTotalAdded());
+    }
+  }
+
+  @Test
+  public void testTransformHigherVersion() throws Exception {
+
+    var readQueue = "transform-read-" + System.currentTimeMillis();
+    var writeQueue = "transform-write-" + System.currentTimeMillis();
+
+    rabbitMqService.clearQueue(readQueue);
+    rabbitMqService.clearQueue(writeQueue);
+
+    try (Jedis jedis = new Jedis("localhost", 6379)) {
+      jedis.flushDB();
+
+      transformService.sendSingleMessage(readQueue, "ABC", 1, 100);
+      TransformRequest request = new TransformRequest(readQueue, writeQueue, 1);
+      coreRestController.transformMessages(request);
+
+      rabbitMqService.clearQueue(readQueue);
+      rabbitMqService.clearQueue(writeQueue);
+      transformService.sendSingleMessage(readQueue, "ABC", 3, 400);
+      coreRestController.transformMessages(request);
+
+      List<String> output = rabbitMqService.getMessages(writeQueue, 10000);
+
+      ObjectMapper mapper = new ObjectMapper();
+      JsonNode node = mapper.readTree(output.getFirst());
+
+      assertEquals("ABC", node.get("key").asText());
+      assertEquals(3, node.get("version").asInt());
+      assertEquals(410.5, node.get("value").asDouble(), 0.001);
+
+      assertEquals(2, transformService.getTotalMessagesWritten());
+      assertEquals(2, transformService.getTotalMessagesProcessed());
+      assertEquals(2, transformService.getTotalRedisUpdates());
+      assertEquals(521, transformService.getTotalValueWritten());
+      assertEquals(21, transformService.getTotalAdded());
     }
   }
 }

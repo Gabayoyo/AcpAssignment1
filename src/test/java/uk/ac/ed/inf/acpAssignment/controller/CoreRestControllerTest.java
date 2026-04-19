@@ -15,11 +15,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
+import redis.clients.jedis.Jedis;
+import uk.ac.ed.inf.acpAssignment.dto.SplitterRequest;
 import uk.ac.ed.inf.acpAssignment.service.DynamoDbService;
 import uk.ac.ed.inf.acpAssignment.service.KafkaService;
-import uk.ac.ed.inf.acpAssignment.service.PostgresService;
 import uk.ac.ed.inf.acpAssignment.service.RabbitMqService;
 import uk.ac.ed.inf.acpAssignment.service.S3Service;
+import uk.ac.ed.inf.acpAssignment.service.TransformService;
 
 @SpringBootTest(properties = {
     "ACP_S3=http://localhost:4566",
@@ -49,6 +51,8 @@ public class CoreRestControllerTest {
 
   @Autowired
   JdbcTemplate jdbcTemplate;
+  @Autowired
+  private TransformService transformService;
 
   @Test
   public void testGetJsonBucketObject() {
@@ -384,6 +388,161 @@ public class CoreRestControllerTest {
           i, i
       );
       assertEquals(expected, messages.get(i));
+    }
+  }
+
+  @Test
+  public void testSplitterEven() throws Exception {
+
+    var queueName = "splitter-queue-" + System.currentTimeMillis();
+    var topicEven = "splitter-even-" + System.currentTimeMillis();
+    var topicOdd = "splitter-odd-" + System.currentTimeMillis();
+    var redisEven = "redis-even-" + System.currentTimeMillis();
+    var redisOdd = "redis-odd-" + System.currentTimeMillis();
+
+    rabbitMqService.clearQueue(queueName);
+
+    rabbitMqService.seedQueueSplitterOnce(queueName, 4, 40.0, "even");
+
+    SplitterRequest request = new SplitterRequest(
+        queueName,
+        topicOdd,
+        redisOdd,
+        topicEven,
+        redisEven,
+        1
+    );
+
+    try (Jedis jedis = new Jedis("localhost", 6379)) {
+      jedis.flushDB();
+      coreRestController.splitter(request);
+
+      List<String> evenMessages = kafkaService.getMessages(topicEven, 5000);
+
+      assertEquals(1, evenMessages.size());
+
+      assertEquals("1", jedis.get("count_even"));
+      assertEquals("40.00", jedis.get("average_even"));
+
+      assertEquals("{\"Id\":4,\"Value\":40.0,\"AdditionalData\":\"even\"}", jedis.hget(redisEven, "4"));
+    }
+  }
+
+  @Test
+  public void testSplitterOdd() throws Exception {
+
+    var queueName = "splitter-queue-" + System.currentTimeMillis();
+    var topicEven = "splitter-even-" + System.currentTimeMillis();
+    var topicOdd = "splitter-odd-" + System.currentTimeMillis();
+    var redisEven = "redis-even-" + System.currentTimeMillis();
+    var redisOdd = "redis-odd-" + System.currentTimeMillis();
+
+    rabbitMqService.clearQueue(queueName);
+
+    rabbitMqService.seedQueueSplitterOnce(queueName, 5, 25.0, "odd");
+
+    SplitterRequest request = new SplitterRequest(
+        queueName,
+        topicOdd,
+        redisOdd,
+        topicEven,
+        redisEven,
+        1
+    );
+
+    try (Jedis jedis = new Jedis("localhost", 6379)) {
+      jedis.flushDB();
+      coreRestController.splitter(request);
+
+      List<String> oddMessages = kafkaService.getMessages(topicOdd, 5000);
+
+      assertEquals(1, oddMessages.size());
+
+      assertEquals("1", jedis.get("count_odd"));
+      assertEquals("25.00", jedis.get("average_odd"));
+
+      assertEquals("{\"Id\":5,\"Value\":25.0,\"AdditionalData\":\"odd\"}", jedis.hget(redisOdd, "5"));
+    }
+  }
+
+  @Test
+  public void testSplitterEvenOdd() throws Exception {
+
+    var queueName = "splitter-queue-" + System.currentTimeMillis();
+    var topicEven = "splitter-even-" + System.currentTimeMillis();
+    var topicOdd = "splitter-odd-" + System.currentTimeMillis();
+    var redisEven = "redis-even-" + System.currentTimeMillis();
+    var redisOdd = "redis-odd-" + System.currentTimeMillis();
+
+    rabbitMqService.clearQueue(queueName);
+
+    rabbitMqService.seedQueueSplitterOnce(queueName, 1, 10.0, "odd");
+    rabbitMqService.seedQueueSplitterOnce(queueName, 2, 20.0, "even");
+
+    SplitterRequest request = new SplitterRequest(
+        queueName,
+        topicOdd,
+        redisOdd,
+        topicEven,
+        redisEven,
+        2
+    );
+
+    try (Jedis jedis = new Jedis("localhost", 6379)) {
+      jedis.flushDB();
+      coreRestController.splitter(request);
+
+      List<String> evenMessages = kafkaService.getMessages(topicEven, 5000);
+      List<String> oddMessages = kafkaService.getMessages(topicOdd, 5000);
+
+      assertEquals(1, evenMessages.size());
+      assertEquals(1, oddMessages.size());
+
+      assertEquals("1", jedis.get("count_even"));
+      assertEquals("1", jedis.get("count_odd"));
+      assertEquals("10.00", jedis.get("average_odd"));
+      assertEquals("20.00", jedis.get("average_even"));
+
+      assertEquals("{\"Id\":1,\"Value\":10.0,\"AdditionalData\":\"odd\"}", jedis.hget(redisOdd, "1"));
+      assertEquals("{\"Id\":2,\"Value\":20.0,\"AdditionalData\":\"even\"}", jedis.hget(redisEven, "2"));
+    }
+  }
+
+  @Test
+  public void testSplitterAverage() throws Exception {
+
+    var queueName = "splitter-queue-" + System.currentTimeMillis();
+    var topicEven = "splitter-even-" + System.currentTimeMillis();
+    var topicOdd = "splitter-odd-" + System.currentTimeMillis();
+    var redisEven = "redis-even-" + System.currentTimeMillis();
+    var redisOdd = "redis-odd-" + System.currentTimeMillis();
+
+    rabbitMqService.clearQueue(queueName);
+
+    try (Jedis jedis = new Jedis("localhost", 6379)) {
+
+      jedis.flushDB();
+
+      rabbitMqService.seedQueueSplitterOnce(queueName, 1, 10.0, "odd");
+      rabbitMqService.seedQueueSplitterOnce(queueName, 3, 20.0, "odd");
+
+      SplitterRequest request = new SplitterRequest(
+          queueName,
+          topicOdd,
+          redisOdd,
+          topicEven,
+          redisEven,
+          2
+      );
+      coreRestController.splitter(request);
+
+      List<String> oddMessages = kafkaService.getMessages(topicOdd, 5000);
+
+      assertEquals(2, oddMessages.size());
+      assertEquals("2", jedis.get("count_odd"));
+      assertEquals("15.00", jedis.get("average_odd"));
+      assertEquals("{\"Id\":1,\"Value\":10.0,\"AdditionalData\":\"odd\"}", jedis.hget(redisOdd, "1"));
+      assertEquals("{\"Id\":3,\"Value\":20.0,\"AdditionalData\":\"odd\"}", jedis.hget(redisOdd, "3"));
     }
   }
 }

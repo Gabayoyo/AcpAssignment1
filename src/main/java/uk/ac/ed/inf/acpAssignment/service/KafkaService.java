@@ -93,7 +93,6 @@ public class KafkaService {
 
       while (buffer.size() < messagesToConsider &&
           System.currentTimeMillis() < hardDeadline) {
-
         ConsumerRecords<String, String> records =
             consumer.poll(Duration.ofMillis(100));
 

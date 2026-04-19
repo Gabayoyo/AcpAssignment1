@@ -159,7 +159,22 @@ public class RabbitMqService {
 
         channel.basicPublish("", queueName, null, json.getBytes(StandardCharsets.UTF_8));
       }
+    }
+  }
 
+  public void seedQueueSplitterOnce(String queueName, int id, double value,
+      String additionalData) throws Exception {
+    ObjectMapper mapper = new ObjectMapper();
+    ConnectionFactory factory = new ConnectionFactory();
+    factory.setHost(rabbitMqConfiguration.getRabbitMqHost());
+    factory.setPort(rabbitMqConfiguration.getRabbitMqPort());
+
+    try(Connection connection  = factory.newConnection();
+    Channel channel = connection.createChannel()) {
+      channel.queueDeclare(queueName, true, false, false, null);
+      TestMessage msg = new TestMessage(id, value, additionalData);
+      String json = mapper.writeValueAsString(msg);
+      channel.basicPublish("", queueName, null, json.getBytes(StandardCharsets.UTF_8));
     }
   }
 }

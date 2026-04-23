@@ -3,7 +3,7 @@ spring:
     name: AcpTutorial
 
   datasource:
-    url: "${ACP_POSTGRES:jdbc:postgresql://localhost:5433/acp?currentSchema=s2417814}"
+    url: "${ACP_POSTGRES:jdbc:postgresql://db:5432/acp?currentSchema=s2417814}"
     username: "${POSTGRES_USER:postgres}"
     password: "${POSTGRES_PASSWORD:postgres}"
     driver-class-name: org.postgresql.Driver

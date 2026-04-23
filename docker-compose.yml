@@ -17,6 +17,10 @@ services:
     #      size: 134217728 # 128*2^20 bytes = 128Mb
     environment:
       POSTGRES_PASSWORD: postgres
+      ACP_POSTGRES: jdbc:postgresql://db:5432/acp?currentSchema=s2417814
+      RABBITMQ_HOST: rabbitmq
+      REDIS_HOST: redis
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     ports:
       - 5433:5432
 

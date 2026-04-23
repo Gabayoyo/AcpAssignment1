@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -35,6 +36,11 @@ import uk.ac.ed.inf.acpAssignment.service.TransformService;
 })
 @AutoConfigureMockMvc
 public class CoreRestControllerTest {
+
+  @BeforeEach
+  void reset() {
+    transformService.resetState();
+  }
 
   @Autowired
   MockMvc mockMvc;
